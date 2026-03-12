@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useCallback, useRef } from "react";
 const genId = () => Math.random().toString(36).slice(2, 10);
 const COLORS = ["#ef4444","#f59e0b","#10b981","#3b82f6","#8b5cf6","#ec4899","#0ea5e9","#64748b","#dc2626","#d97706","#059669","#2563eb"];

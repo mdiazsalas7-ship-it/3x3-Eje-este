@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useMemo } from "react";
 const genId = () => Math.random().toString(36).slice(2, 10);
 const COLORS = ["#ef4444","#f59e0b","#10b981","#3b82f6","#8b5cf6","#ec4899","#0ea5e9","#64748b","#dc2626","#d97706","#059669","#2563eb"];
 const GRUPOS = ["A","B","C","D"];
@@ -9,10 +9,88 @@ const LOGO_ARAGUA = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAAAAAAD/4gHYSUND
 const LOGO_FVB = "data:image/jpeg;base64,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";
 const LOGO_FIBA = "data:image/jpeg;base64,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";
 
-const F = { bar: "'Barlow Condensed', sans-serif", out: "'Outfit', sans-serif" };
 
+const F = { bar: "'Barlow Condensed', sans-serif", out: "'Outfit', sans-serif" };
+// Text contrast: returns white or dark based on bg luminance
+const txtC=(hex)=>{const c=hex.replace('#','');const r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);return(r*299+g*587+b*114)/1000>140?"#1e293b":"#ffffff";};
+// TeamBadge: shows logo or initials with correct contrast
+function TB({team,size=34,fontSize="0.6rem",border}){
+  if(team?.logo)return <img src={team.logo} alt="" style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",flexShrink:0,border:border||`2px solid ${team.color||"#64748b"}`}}/>;
+  return <div style={{width:size,height:size,borderRadius:"50%",background:team?.color||"#64748b",display:"flex",alignItems:"center",justifyContent:"center",color:txtC(team?.color||"#64748b"),fontWeight:900,fontSize,flexShrink:0,border:border||"none",textShadow:"0 1px 2px rgba(0,0,0,0.3)"}}>{(team?.nombre||"??").slice(0,2)}</div>;
+}
+
+// ═══════════════════════════════════════════════
+// FIBA 3x3 APPENDIX D — CLASSIFICATION (2026)
+// 1. Most wins
+// 2. H2H win/loss (within pool only)
+// 3. Most points scored in average (cap 21/game, no forfeits)
+// 4. Seeding (maintain order)
+// ═══════════════════════════════════════════════
+const calcH2HWins = (tid, opps, fin) => {
+  let w=0,l=0;
+  fin.filter(m=>(m.localId===tid&&opps.includes(m.visitId))||(m.visitId===tid&&opps.includes(m.localId))).forEach(m=>{
+    const eL=m.localId===tid; const mi=eL?(m.marcadorL||0):(m.marcadorV||0); const su=eL?(m.marcadorV||0):(m.marcadorL||0);
+    if(mi>su)w++; else l++;
+  });
+  return {w,l};
+};
+const calcPPG = (tid, fin) => {
+  const games=fin.filter(m=>m.localId===tid||m.visitId===tid);
+  if(!games.length) return 0;
+  let total=0;
+  games.forEach(m=>{const eL=m.localId===tid; const pf=eL?(m.marcadorL||0):(m.marcadorV||0); total+=Math.min(pf,21);});
+  return total/games.length;
+};
+const resolverEmpate3x3 = (emp, fin) => {
+  if(emp.length<=1) return emp;
+  const ids=emp.map(e=>e.id);
+  // Step 2: H2H win/loss
+  const h2h={};emp.forEach(e=>{h2h[e.id]=calcH2HWins(e.id,ids.filter(x=>x!==e.id),fin);});
+  const byH2H=[...emp].sort((a,b)=>h2h[b.id].w-h2h[a.id].w);
+  const res=[];let i=0;
+  while(i<byH2H.length){let j=i+1;while(j<byH2H.length&&h2h[byH2H[j].id].w===h2h[byH2H[i].id].w)j++;
+    const sub=byH2H.slice(i,j);
+    if(sub.length>1){
+      // Step 3: PPG avg (cap 21)
+      const ppg={};sub.forEach(e=>{ppg[e.id]=calcPPG(e.id,fin);});
+      sub.sort((a,b)=>ppg[b.id]-ppg[a.id]);
+    }
+    res.push(...sub);i=j;
+  }
+  return res;
+};
+const sortFIBA3x3=(equipos,fin)=>{
+  // Step 1: Most wins
+  const byWins=[...equipos].sort((a,b)=>b.jg-a.jg);
+  const r=[];let i=0;
+  while(i<byWins.length){let j=i+1;while(j<byWins.length&&byWins[j].jg===byWins[i].jg)j++;
+    r.push(...resolverEmpate3x3(byWins.slice(i,j),fin));i=j;
+  }
+  return r;
+};
+const calcForma=(tid,fin,n=5)=>{const r=fin.filter(m=>m.localId===tid||m.visitId===tid).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));return r.slice(-n).map(m=>{const eL=m.localId===tid;const mi=eL?(m.marcadorL||0):(m.marcadorV||0);const su=eL?(m.marcadorV||0):(m.marcadorL||0);return mi>su?'G':'P';});};
+
+// Round-robin calendar generator
+const genRoundRobin=(teamIds)=>{
+  const n=teamIds.length; if(n<2) return [];
+  const ids=[...teamIds]; if(n%2!==0) ids.push(null);
+  const rounds=[]; const half=ids.length/2;
+  for(let r=0;r<ids.length-1;r++){
+    const round=[];
+    for(let i=0;i<half;i++){
+      const a=ids[i],b=ids[ids.length-1-i];
+      if(a&&b) round.push({localId:a,visitId:b});
+    }
+    rounds.push(round);
+    ids.splice(1,0,ids.pop());
+  }
+  return rounds;
+};
+
+
+// ═══════════════ MAIN APP ═══════════════
 export default function Torneo3x3() {
-  const [genero, setGenero] = useState(null); // null | "M" | "F"
+  const [genero, setGenero] = useState(null);
   const [view, setView] = useState("menu");
   const [allTeams, setAllTeams] = useState([]);
   const [allPlayers, setAllPlayers] = useState([]);
@@ -23,541 +101,251 @@ export default function Torneo3x3() {
   const [mesaStep, setMesaStep] = useState("select");
   const [toast, setToast] = useState(null);
   const toastRef = useRef(null);
-  const showToast = useCallback((msg, color = "#10b981") => {
-    if (toastRef.current) clearTimeout(toastRef.current);
-    setToast({ msg, color });
-    toastRef.current = setTimeout(() => setToast(null), 1800);
-  }, []);
+  const showToast = useCallback((msg, color = "#10b981") => { if (toastRef.current) clearTimeout(toastRef.current); setToast({ msg, color }); toastRef.current = setTimeout(() => setToast(null), 1800); }, []);
 
-  // Filtered data by active gender
   const teams = allTeams.filter(t => t.genero === genero);
   const players = allPlayers.filter(p => { const t = allTeams.find(x => x.id === p.equipoId); return t?.genero === genero; });
   const matches = allMatches.filter(m => m.genero === genero);
+  const finMatches = useMemo(() => matches.filter(m => m.estatus === "finalizado"), [matches]);
   const statsPartido = allStats.filter(s => { const m = allMatches.find(x => x.id === s.matchId); return m?.genero === genero; });
-  const jugadas = allJugadas.filter(j => { const m = allMatches.find(x => x.id === j.matchId); return m?.genero === genero; });
 
-  const setTeams = fn => setAllTeams(prev => { const others = prev.filter(t => t.genero !== genero); const curr = prev.filter(t => t.genero === genero); const updated = typeof fn === 'function' ? fn(curr) : fn; return [...others, ...updated]; });
-  const setPlayers = fn => setAllPlayers(prev => { const currTeamIds = new Set(allTeams.filter(t => t.genero === genero).map(t => t.id)); const others = prev.filter(p => !currTeamIds.has(p.equipoId)); const curr = prev.filter(p => currTeamIds.has(p.equipoId)); const updated = typeof fn === 'function' ? fn(curr) : fn; return [...others, ...updated]; });
+  const setTeams = fn => setAllTeams(prev => { const o = prev.filter(t => t.genero !== genero); const c = prev.filter(t => t.genero === genero); return [...o, ...(typeof fn==='function'?fn(c):fn)]; });
+
+  // Auto-generate calendar for a group
+  const generarCalendario = useCallback((grupo) => {
+    const gt = allTeams.filter(t => t.genero === genero && t.grupo === grupo);
+    if (gt.length < 2) return;
+    // Remove existing programados for this group+genero
+    setAllMatches(prev => {
+      const existing = prev.filter(m => {
+        if (m.genero !== genero || m.estatus !== "programado") return true;
+        const lT = allTeams.find(t => t.id === m.localId);
+        const vT = allTeams.find(t => t.id === m.visitId);
+        return !(lT?.grupo === grupo && vT?.grupo === grupo);
+      });
+      const rounds = genRoundRobin(gt.map(t => t.id));
+      const newMatches = [];
+      rounds.forEach((round, ri) => {
+        round.forEach(pair => {
+          // Don't add if match already exists (programado or finalizado)
+          const exists = existing.some(m => m.genero === genero &&
+            ((m.localId===pair.localId&&m.visitId===pair.visitId)||(m.localId===pair.visitId&&m.visitId===pair.localId)));
+          if (!exists) newMatches.push({ id: genId(), localId: pair.localId, visitId: pair.visitId, marcadorL: 0, marcadorV: 0, estatus: "programado", fecha: "", jornada: ri + 1, genero });
+        });
+      });
+      return [...existing, ...newMatches];
+    });
+    showToast(`📅 Calendario Grupo ${grupo} generado`);
+  }, [allTeams, genero, showToast]);
 
   const handleStat = useCallback((jugador, equipo, pts) => {
     if (!mesaMatch) return;
-    setAllStats(prev => {
-      const key = `${mesaMatch.id}_${jugador.id}`;
-      const ex = prev.find(s => s.id === key);
-      if (ex) return prev.map(s => s.id === key ? { ...s, puntos: (s.puntos||0)+pts, [pts===1?'p1':'p2']: (s[pts===1?'p1':'p2']||0)+1 } : s);
-      return [...prev, { id: key, matchId: mesaMatch.id, jugadorId: jugador.id, jugadorNombre: jugador.nombre, jugadorNumero: jugador.numero, equipo, puntos: pts, p1: pts===1?1:0, p2: pts===2?1:0 }];
-    });
-    setAllJugadas(prev => [{ id: genId(), matchId: mesaMatch.id, jugadorId: jugador.id, jugadorNombre: jugador.nombre, jugadorNumero: jugador.numero, equipo, puntos: pts, timestamp: Date.now() }, ...prev]);
-    setAllMatches(prev => prev.map(m => m.id === mesaMatch.id ? { ...m, marcadorL: equipo==="local"?(m.marcadorL||0)+pts:m.marcadorL, marcadorV: equipo==="visit"?(m.marcadorV||0)+pts:m.marcadorV } : m));
+    setAllStats(prev => { const k=`${mesaMatch.id}_${jugador.id}`; const ex=prev.find(s=>s.id===k); if(ex)return prev.map(s=>s.id===k?{...s,puntos:(s.puntos||0)+pts,[pts===1?'p1':'p2']:(s[pts===1?'p1':'p2']||0)+1}:s); return [...prev,{id:k,matchId:mesaMatch.id,jugadorId:jugador.id,jugadorNombre:jugador.nombre,jugadorNumero:jugador.numero,equipo,puntos:pts,p1:pts===1?1:0,p2:pts===2?1:0}]; });
+    setAllJugadas(prev => [{id:genId(),matchId:mesaMatch.id,jugadorId:jugador.id,jugadorNombre:jugador.nombre,jugadorNumero:jugador.numero,equipo,puntos:pts,timestamp:Date.now()},...prev]);
+    setAllMatches(prev => prev.map(m=>m.id===mesaMatch.id?{...m,marcadorL:equipo==="local"?(m.marcadorL||0)+pts:m.marcadorL,marcadorV:equipo==="visit"?(m.marcadorV||0)+pts:m.marcadorV}:m));
     showToast(`${jugador.nombre.split(" ")[0]} — ${pts===1?"🏀 +1":"🔥 +2"}`, "#3b82f6");
   }, [mesaMatch, showToast]);
 
-  const handleUndo = useCallback(() => {
-    const matchJugadas = allJugadas.filter(j => j.matchId === mesaMatch?.id);
-    const last = matchJugadas[0];
-    if (!last) { showToast("Sin jugadas", "#f59e0b"); return; }
-    setAllJugadas(prev => prev.filter(j => j.id !== last.id));
-    setAllStats(prev => prev.map(s => {
-      if (s.id !== `${last.matchId}_${last.jugadorId}`) return s;
-      return { ...s, puntos: Math.max(0,(s.puntos||0)-last.puntos), [last.puntos===1?'p1':'p2']: Math.max(0,(s[last.puntos===1?'p1':'p2']||0)-1) };
-    }).filter(s => (s.puntos||0) > 0));
-    setAllMatches(prev => prev.map(m => m.id === last.matchId ? { ...m, marcadorL: last.equipo==="local"?Math.max(0,(m.marcadorL||0)-last.puntos):m.marcadorL, marcadorV: last.equipo==="visit"?Math.max(0,(m.marcadorV||0)-last.puntos):m.marcadorV } : m));
-    showToast("↩️ Deshecho", "#f59e0b");
-  }, [mesaMatch, allJugadas, showToast]);
+  // Delete ANY play (not just last)
+  const handleDeletePlay = useCallback((jugada) => {
+    if (!jugada) return;
+    setAllJugadas(prev => prev.filter(j => j.id !== jugada.id));
+    setAllStats(prev => prev.map(s => { if(s.id!==`${jugada.matchId}_${jugada.jugadorId}`)return s; return {...s,puntos:Math.max(0,(s.puntos||0)-jugada.puntos),[jugada.puntos===1?'p1':'p2']:Math.max(0,(s[jugada.puntos===1?'p1':'p2']||0)-1)}; }).filter(s => (s.puntos||0)>0));
+    setAllMatches(prev => prev.map(m => m.id===jugada.matchId?{...m,marcadorL:jugada.equipo==="local"?Math.max(0,(m.marcadorL||0)-jugada.puntos):m.marcadorL,marcadorV:jugada.equipo==="visit"?Math.max(0,(m.marcadorV||0)-jugada.puntos):m.marcadorV}:m));
+    showToast("🗑️ Jugada eliminada", "#ef4444");
+  }, [showToast]);
 
-  const finalizarPartido = useCallback(() => {
-    if (!mesaMatch) return;
-    setAllMatches(prev => prev.map(m => m.id===mesaMatch.id?{...m,estatus:"finalizado"}:m));
-    setMesaMatch(null); setMesaStep("select");
-    showToast("✅ Partido finalizado");
-  }, [mesaMatch, showToast]);
-
-  const crearPartido = useCallback((lid, vid) => {
-    const m = { id: genId(), localId: lid, visitId: vid, marcadorL: 0, marcadorV: 0, estatus: "programado", fecha: new Date().toISOString().split("T")[0], genero };
-    setAllMatches(prev => [...prev, m]); setMesaMatch(m); setMesaStep("active");
-  }, [genero]);
+  const finalizarPartido = useCallback(() => { if(!mesaMatch)return; setAllMatches(prev=>prev.map(m=>m.id===mesaMatch.id?{...m,estatus:"finalizado"}:m)); setMesaMatch(null);setMesaStep("select"); showToast("✅ Partido finalizado"); }, [mesaMatch, showToast]);
+  const crearPartido = useCallback((lid,vid) => { const m={id:genId(),localId:lid,visitId:vid,marcadorL:0,marcadorV:0,estatus:"programado",fecha:new Date().toISOString().split("T")[0],genero}; setAllMatches(prev=>[...prev,m]);setMesaMatch(m);setMesaStep("active"); }, [genero]);
+  const iniciarPartido = useCallback((match) => { setMesaMatch(match); setMesaStep("active"); }, []);
 
   const calcStandings = useCallback(grupo => {
-    const gt = teams.filter(t => t.grupo === grupo);
-    const fin = matches.filter(m => m.estatus === "finalizado");
-    return gt.map(team => {
-      let jj=0,jg=0,jp=0,pf=0,pc=0,pts=0;
-      fin.forEach(m => { const eL=m.localId===team.id; const eV=m.visitId===team.id; if(!eL&&!eV)return; jj++; const mi=eL?m.marcadorL:m.marcadorV; const su=eL?m.marcadorV:m.marcadorL; pf+=mi||0;pc+=su||0; if(mi>su){jg++;pts+=2}else{jp++;pts+=1}});
-      return { ...team, jj,jg,jp,pf,pc,dif:pf-pc,pts };
-    }).sort((a,b) => b.pts-a.pts||b.dif-a.dif||b.pf-a.pf);
-  }, [teams, matches]);
+    const gt=teams.filter(t=>t.grupo===grupo); const fin=finMatches;
+    const enriched=gt.map(team=>{
+      let jj=0,jg=0,jp=0,pf=0,pc=0;
+      fin.forEach(m=>{const eL=m.localId===team.id;const eV=m.visitId===team.id;if(!eL&&!eV)return;jj++;
+        const mi=eL?(m.marcadorL||0):(m.marcadorV||0);const su=eL?(m.marcadorV||0):(m.marcadorL||0);
+        pf+=mi;pc+=su;if(mi>su)jg++;else jp++;
+      });
+      const ppg=jj>0?pf/jj:0;
+      return{...team,jj,jg,jp,pf,pc,dif:pf-pc,ppg:ppg.toFixed(1),forma:calcForma(team.id,fin)};
+    });
+    return sortFIBA3x3(enriched,fin);
+  }, [teams, finMatches]);
 
   const calcLeaders = useCallback(() => {
-    const finIds = new Set(matches.filter(m => m.estatus==="finalizado").map(m => m.id));
-    const sf = statsPartido.filter(s => finIds.has(s.matchId));
-    const agg = {};
-    sf.forEach(s => {
-      if (!agg[s.jugadorId]) { const pl = allPlayers.find(p=>p.id===s.jugadorId); const team = allTeams.find(t => t.id===pl?.equipoId); agg[s.jugadorId] = { jugadorId:s.jugadorId, nombre:s.jugadorNombre, numero:s.jugadorNumero, equipo:team?.nombre||"", equipoColor:team?.color||"#64748b", puntos:0, partidos:0 }; }
-      agg[s.jugadorId].puntos += s.puntos||0;
-      agg[s.jugadorId].partidos += 1;
-    });
-    return Object.values(agg).sort((a,b) => b.puntos-a.puntos);
-  }, [matches, statsPartido, allTeams, allPlayers]);
+    const finIds=new Set(finMatches.map(m=>m.id)); const sf=statsPartido.filter(s=>finIds.has(s.matchId)); const agg={};
+    sf.forEach(s=>{if(!agg[s.jugadorId]){const pl=allPlayers.find(p=>p.id===s.jugadorId);const tm=allTeams.find(t=>t.id===pl?.equipoId);agg[s.jugadorId]={jugadorId:s.jugadorId,nombre:s.jugadorNombre,numero:s.jugadorNumero,equipo:tm?.nombre||"",equipoColor:tm?.color||"#64748b",puntos:0,partidos:0};}agg[s.jugadorId].puntos+=s.puntos||0;agg[s.jugadorId].partidos+=1;});
+    return Object.values(agg).sort((a,b)=>b.puntos-a.puntos);
+  }, [finMatches, statsPartido, allTeams, allPlayers]);
 
-  const genLabel = genero === "M" ? "MASCULINO" : "FEMENINO";
-  const genIcon = genero === "M" ? "🏀" : "🏀";
-  const genColor = genero === "M" ? "#1e3a8a" : "#db2777";
+  const genLabel=genero==="M"?"MASCULINO":"FEMENINO"; const genColor=genero==="M"?"#1e3a8a":"#db2777";
 
   return (
     <div style={S.app}>
       <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-      {toast && <div style={{...S.toast, background:toast.color}}>{toast.msg}</div>}
-
-      {genero === null && <GenderSelect onSelect={g => { setGenero(g); setView("menu"); }} allTeams={allTeams} allMatches={allMatches} />}
-      {genero !== null && view==="menu" && <MenuView teams={teams} players={players} matches={matches} onNav={setView} genLabel={genLabel} genColor={genColor} onBackGender={()=>{setGenero(null);setView("menu");}} />}
-      {genero !== null && view==="admin" && <AdminView teams={teams} setTeams={setTeams} players={players} setPlayers={setPlayers} allPlayers={allPlayers} setAllPlayers={setAllPlayers} onBack={()=>setView("menu")} showToast={showToast} genero={genero} genLabel={genLabel} genColor={genColor} />}
-      {genero !== null && view==="standings" && <StandingsView calcStandings={calcStandings} onBack={()=>setView("menu")} genLabel={genLabel} genColor={genColor} teams={teams} />}
-      {genero !== null && view==="mesa" && <MesaView step={mesaStep} teams={teams} players={players} mesaMatch={mesaMatch} matches={matches} statsPartido={statsPartido} jugadas={jugadas} allJugadas={allJugadas} onCrearPartido={crearPartido} onStat={handleStat} onUndo={handleUndo} onFinalizar={finalizarPartido} onBack={()=>setView("menu")} setMesaStep={setMesaStep} setMesaMatch={setMesaMatch} genColor={genColor} />}
-      {genero !== null && view==="leaders" && <LeadersView leaders={calcLeaders()} onBack={()=>setView("menu")} genLabel={genLabel} genColor={genColor} />}
+      {toast&&<div style={{...S.toast,background:toast.color}}>{toast.msg}</div>}
+      {genero===null&&<GenderSelect onSelect={g=>{setGenero(g);setView("menu");}} allTeams={allTeams} allMatches={allMatches} />}
+      {genero!==null&&view==="menu"&&<MenuView teams={teams} players={players} matches={matches} onNav={setView} genLabel={genLabel} genColor={genColor} onBackGender={()=>setGenero(null)} />}
+      {genero!==null&&view==="admin"&&<AdminView teams={teams} setTeams={setTeams} players={players} allPlayers={allPlayers} setAllPlayers={setAllPlayers} onBack={()=>setView("menu")} showToast={showToast} genero={genero} genLabel={genLabel} genColor={genColor} />}
+      {genero!==null&&view==="calendar"&&<CalendarView teams={teams} matches={matches} allTeams={allTeams} onGenerarCalendario={generarCalendario} onIniciarPartido={iniciarPartido} setMesaStep={setMesaStep} onNav={setView} onBack={()=>setView("menu")} genLabel={genLabel} genColor={genColor} />}
+      {genero!==null&&view==="standings"&&<StandingsView calcStandings={calcStandings} onBack={()=>setView("menu")} genLabel={genLabel} genColor={genColor} teams={teams} />}
+      {genero!==null&&view==="mesa"&&<MesaView step={mesaStep} teams={teams} players={players} mesaMatch={mesaMatch} matches={matches} statsPartido={statsPartido} allJugadas={allJugadas} onCrearPartido={crearPartido} onStat={handleStat} onDeletePlay={handleDeletePlay} onFinalizar={finalizarPartido} onBack={()=>setView("menu")} setMesaStep={setMesaStep} setMesaMatch={setMesaMatch} genColor={genColor} />}
+      {genero!==null&&view==="leaders"&&<LeadersView leaders={calcLeaders()} onBack={()=>setView("menu")} genLabel={genLabel} genColor={genColor} />}
+      {genero!==null&&view==="arbitros"&&<ArbitrosView teams={teams} finMatches={finMatches} allTeams={allTeams} onBack={()=>setView("menu")} genLabel={genLabel} genColor={genColor} />}
     </div>
   );
 }
 
-// ═══════════════ SELECCIÓN DE GÉNERO ═══════════════
-function GenderSelect({ onSelect, allTeams, allMatches }) {
-  const mTeams = allTeams.filter(t=>t.genero==="M").length;
-  const fTeams = allTeams.filter(t=>t.genero==="F").length;
-  const mGames = allMatches.filter(m=>m.genero==="M"&&m.estatus==="finalizado").length;
-  const fGames = allMatches.filter(m=>m.genero==="F"&&m.estatus==="finalizado").length;
-  const [h, setH] = useState(null);
+// ═══════════════ GENDER ═══════════════
+function GenderSelect({onSelect,allTeams,allMatches}){const mT=allTeams.filter(t=>t.genero==="M").length,fT=allTeams.filter(t=>t.genero==="F").length;const mG=allMatches.filter(m=>m.genero==="M"&&m.estatus==="finalizado").length,fG=allMatches.filter(m=>m.genero==="F"&&m.estatus==="finalizado").length;const[h,setH]=useState(null);return(<div style={S.menuWrap}><div style={S.menuDots}/><div style={{textAlign:"center",marginBottom:16,position:"relative",zIndex:1}}><div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:20,marginBottom:16}}><img src={LOGO_FIBA} alt="FIBA 3x3" style={{width:90,height:64,objectFit:"contain",background:"white",borderRadius:10,padding:"6px 10px",boxShadow:"0 4px 16px rgba(0,0,0,0.3)"}}/><img src={LOGO_ARAGUA} alt="Asociación" style={{width:80,height:80,borderRadius:"50%",objectFit:"cover",border:"3px solid rgba(255,255,255,0.3)",boxShadow:"0 4px 16px rgba(0,0,0,0.3)"}}/></div><h1 style={S.menuTitle}>TORNEO 3×3</h1><p style={S.menuSub}>Asociación de Baloncesto de Aragua · 2026</p><div style={{marginTop:6,display:"flex",justifyContent:"center",alignItems:"center",gap:8}}><img src={LOGO_FVB} alt="FVB" style={{width:28,height:28,borderRadius:"50%",objectFit:"cover",border:"1.5px solid rgba(255,255,255,0.2)"}}/><span style={{fontSize:"0.46rem",color:"rgba(255,255,255,0.35)",fontFamily:F.bar,letterSpacing:1}}>FEDERACIÓN VENEZOLANA DE BALONCESTO</span></div></div><div style={{marginTop:8,marginBottom:10,textAlign:"center",position:"relative",zIndex:1}}><p style={{fontFamily:F.bar,fontWeight:700,fontSize:"0.75rem",color:"rgba(255,255,255,0.5)",letterSpacing:2,textTransform:"uppercase"}}>Selecciona categoría</p></div><div style={{display:"flex",gap:14,width:"100%",maxWidth:400,position:"relative",zIndex:1}}>{[{g:"M",icon:"♂",label:"MASCULINO",color:"#1e3a8a",accent:"#3b82f6",teams:mT,games:mG},{g:"F",icon:"♀",label:"FEMENINO",color:"#9d174d",accent:"#ec4899",teams:fT,games:fG}].map(it=>(<button key={it.g} onClick={()=>onSelect(it.g)} onMouseEnter={()=>setH(it.g)} onMouseLeave={()=>setH(null)} style={{flex:1,padding:"28px 14px",borderRadius:18,border:`2px solid ${h===it.g?it.accent:it.color+"88"}`,background:h===it.g?`linear-gradient(160deg,${it.color},${it.accent})`:"rgba(255,255,255,0.04)",color:"white",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,transition:"all 0.25s",transform:h===it.g?"translateY(-3px) scale(1.02)":"none",boxShadow:h===it.g?`0 10px 30px ${it.accent}55`:"none"}}><span style={{fontSize:"2.2rem"}}>{it.icon}</span><span style={{fontFamily:F.bar,fontWeight:900,fontSize:"1.1rem",letterSpacing:2}}>{it.label}</span><span style={{fontSize:"0.5rem",opacity:0.6}}>{it.teams} equipos · {it.games} partidos</span></button>))}</div></div>);}
 
-  return (
-    <div style={S.menuWrap}>
-      <div style={S.menuDots} />
-      <div style={{ textAlign:"center", marginBottom:16, position:"relative", zIndex:1 }}>
-        <div style={{ display:"flex", justifyContent:"center", alignItems:"center", gap:12, marginBottom:14 }}>
-          <img src={LOGO_ARAGUA} alt="Aragua" style={{ width:44, height:44, borderRadius:"50%", objectFit:"cover", border:"2px solid rgba(255,255,255,0.2)" }} />
-          <img src={LOGO_LIGA} alt="Liga" style={{ width:68, height:68, borderRadius:12, objectFit:"contain", background:"white", padding:3 }} />
-          <img src={LOGO_FVB} alt="FVB" style={{ width:44, height:44, borderRadius:"50%", objectFit:"cover", border:"2px solid rgba(255,255,255,0.2)" }} />
-        </div>
-        <h1 style={S.menuTitle}>TORNEO 3×3</h1>
-        <p style={S.menuSub}>Liga Metropolitana Eje Este · 2026</p>
-        <div style={{ marginTop:6, display:"flex", justifyContent:"center", alignItems:"center", gap:6 }}>
-          <img src={LOGO_FIBA} alt="FIBA" style={{ width:38, height:26, objectFit:"contain", background:"white", borderRadius:4, padding:"2px 4px" }} />
-          <span style={{ fontSize:"0.48rem", color:"rgba(255,255,255,0.35)", fontFamily:F.bar, letterSpacing:1 }}>REGLAS OFICIALES FIBA 3x3</span>
-        </div>
-      </div>
-
-      <div style={{ marginTop:8, marginBottom:10, textAlign:"center", position:"relative", zIndex:1 }}>
-        <p style={{ fontFamily:F.bar, fontWeight:700, fontSize:"0.75rem", color:"rgba(255,255,255,0.5)", letterSpacing:2, textTransform:"uppercase" }}>Selecciona categoría</p>
-      </div>
-
-      <div style={{ display:"flex", gap:14, width:"100%", maxWidth:400, position:"relative", zIndex:1 }}>
-        {[
-          { g:"M", icon:"♂", label:"MASCULINO", color:"#1e3a8a", accent:"#3b82f6", teams:mTeams, games:mGames },
-          { g:"F", icon:"♀", label:"FEMENINO", color:"#9d174d", accent:"#ec4899", teams:fTeams, games:fGames },
-        ].map(item => (
-          <button key={item.g} onClick={()=>onSelect(item.g)} onMouseEnter={()=>setH(item.g)} onMouseLeave={()=>setH(null)}
-            style={{
-              flex:1, padding:"28px 14px", borderRadius:18,
-              border:`2px solid ${h===item.g?item.accent:item.color+"88"}`,
-              background: h===item.g ? `linear-gradient(160deg, ${item.color}, ${item.accent})` : "rgba(255,255,255,0.04)",
-              color:"white", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:6,
-              transition:"all 0.25s", transform:h===item.g?"translateY(-3px) scale(1.02)":"none",
-              boxShadow:h===item.g?`0 10px 30px ${item.accent}55`:"none",
-            }}>
-            <span style={{ fontSize:"2.2rem" }}>{item.icon}</span>
-            <span style={{ fontFamily:F.bar, fontWeight:900, fontSize:"1.1rem", letterSpacing:2 }}>{item.label}</span>
-            <span style={{ fontSize:"0.5rem", opacity:0.6, fontWeight:500 }}>{item.teams} equipos · {item.games} partidos</span>
-          </button>
-        ))}
-      </div>
-
-      <div style={{ marginTop:24, textAlign:"center", position:"relative", zIndex:1 }}>
-        <span style={{ fontSize:"0.48rem", color:"rgba(255,255,255,0.25)", letterSpacing:1.5, fontFamily:F.bar }}>
-          ARAGUA, VENEZUELA
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════ MENÚ ═══════════════
-function MenuView({ teams, players, matches, onNav, genLabel, genColor, onBackGender }) {
-  const items = [
-    { key:"admin", icon:"🛡️", label:"EQUIPOS Y JUGADORES", desc:"Gestionar nóminas", color:"#0ea5e9" },
-    { key:"standings", icon:"📊", label:"TABLA DE POSICIONES", desc:"Clasificación por grupo", color:genColor },
-    { key:"mesa", icon:"⏱️", label:"MESA TÉCNICA", desc:"Registro en vivo", color:"#7c3aed" },
-    { key:"leaders", icon:"👑", label:"MVP DEL TORNEO", desc:"Máximo anotador", color:"#b45309" },
-  ];
-  return (
-    <div style={{...S.menuWrap, background: genColor==="#1e3a8a" ? "linear-gradient(160deg, #0a0f1f 0%, #0f1d4e 40%, #1a0a3e 100%)" : "linear-gradient(160deg, #1a0a1f 0%, #4e0f3d 40%, #3e0a2e 100%)"}}>
-      <div style={S.menuDots} />
-      <div style={{ textAlign:"center", marginBottom:10, position:"relative", zIndex:1 }}>
-        <div style={{ display:"flex", justifyContent:"center", alignItems:"center", gap:10, marginBottom:10 }}>
-          <img src={LOGO_LIGA} alt="Liga" style={{ width:52, height:52, borderRadius:10, objectFit:"contain", background:"white", padding:2 }} />
-        </div>
-        <div style={{ display:"inline-block", background:genColor, padding:"4px 16px", borderRadius:20, marginBottom:6 }}>
-          <span style={{ fontFamily:F.bar, fontWeight:900, fontSize:"0.7rem", letterSpacing:2, color:"white" }}>{genLabel}</span>
-        </div>
-        <h1 style={{...S.menuTitle, fontSize:"1.8rem"}}>TORNEO 3×3</h1>
-      </div>
-      <div style={{ display:"flex", flexDirection:"column", gap:10, width:"100%", maxWidth:380, position:"relative", zIndex:1 }}>
-        {items.map(it => <MenuBtn key={it.key} {...it} onClick={()=>onNav(it.key)} />)}
-      </div>
-      <button onClick={onBackGender} style={{ marginTop:20, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.6)", padding:"8px 20px", borderRadius:10, cursor:"pointer", fontFamily:F.bar, fontWeight:700, fontSize:"0.68rem", letterSpacing:1, position:"relative", zIndex:1 }}>
-        ← CAMBIAR CATEGORÍA
-      </button>
-      <div style={{ marginTop:14, textAlign:"center", position:"relative", zIndex:1 }}>
-        <span style={{ fontSize:"0.5rem", color:"rgba(255,255,255,0.25)", letterSpacing:1.5, fontFamily:F.bar }}>
-          {teams.length} EQUIPOS · {players.length} JUGADORES · {matches.filter(m=>m.estatus==="finalizado").length} PARTIDOS
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function MenuBtn({ icon, label, desc, color, onClick }) {
-  const [h,setH] = useState(false);
-  return (
-    <button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)}
-      style={{ width:"100%", padding:"15px 18px", borderRadius:14, border:`1.5px solid ${h?color:color+"55"}`, background:h?color:"rgba(255,255,255,0.04)", color:h?"white":"rgba(255,255,255,0.85)", cursor:"pointer", display:"flex", alignItems:"center", gap:14, transition:"all 0.2s", transform:h?"translateY(-1px)":"none", boxShadow:h?`0 6px 20px ${color}55`:"none" }}>
-      <span style={{ fontSize:"1.3rem", width:32, textAlign:"center" }}>{icon}</span>
-      <div style={{ textAlign:"left" }}>
-        <div style={{ fontFamily:F.bar, fontWeight:800, fontSize:"0.85rem", letterSpacing:1 }}>{label}</div>
-        <div style={{ fontSize:"0.5rem", opacity:0.6, fontWeight:500, marginTop:1 }}>{desc}</div>
-      </div>
-    </button>
-  );
-}
+// ═══════════════ MENU ═══════════════
+function MenuView({teams,players,matches,onNav,genLabel,genColor,onBackGender}){const items=[{key:"admin",icon:"🛡️",label:"EQUIPOS Y JUGADORES",desc:"Gestionar nóminas",color:"#0ea5e9"},{key:"calendar",icon:"📅",label:"CALENDARIO",desc:"Fixture automático por grupo",color:"#059669"},{key:"standings",icon:"📊",label:"TABLA DE POSICIONES",desc:"Apéndice D FIBA 3x3 2026",color:genColor},{key:"mesa",icon:"⏱️",label:"MESA TÉCNICA",desc:"Registro en vivo",color:"#7c3aed"},{key:"leaders",icon:"👑",label:"MVP DEL TORNEO",desc:"Máximo anotador",color:"#b45309"},{key:"arbitros",icon:"⚖️",label:"ÁRBITROS",desc:"Cobro por partido pitado",color:"#dc2626"}];return(<div style={{...S.menuWrap,background:genColor==="#1e3a8a"?"linear-gradient(160deg,#0a0f1f 0%,#0f1d4e 40%,#1a0a3e 100%)":"linear-gradient(160deg,#1a0a1f 0%,#4e0f3d 40%,#3e0a2e 100%)"}}><div style={S.menuDots}/><div style={{textAlign:"center",marginBottom:10,position:"relative",zIndex:1}}><div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:12,marginBottom:8}}><img src={LOGO_FIBA} alt="FIBA" style={{width:56,height:40,objectFit:"contain",background:"white",borderRadius:8,padding:"4px 6px"}}/><img src={LOGO_ARAGUA} alt="Aragua" style={{width:48,height:48,borderRadius:"50%",objectFit:"cover",border:"2px solid rgba(255,255,255,0.25)"}}/></div><div style={{display:"inline-block",background:genColor,padding:"4px 16px",borderRadius:20,marginBottom:6}}><span style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.7rem",letterSpacing:2,color:"white"}}>{genLabel}</span></div><h1 style={{...S.menuTitle,fontSize:"1.8rem"}}>TORNEO 3×3</h1></div><div style={{display:"flex",flexDirection:"column",gap:10,width:"100%",maxWidth:380,position:"relative",zIndex:1}}>{items.map(it=><MenuBtn key={it.key} {...it} onClick={()=>onNav(it.key)}/>)}</div><button onClick={onBackGender} style={{marginTop:20,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.6)",padding:"8px 20px",borderRadius:10,cursor:"pointer",fontFamily:F.bar,fontWeight:700,fontSize:"0.68rem",letterSpacing:1,position:"relative",zIndex:1}}>← CAMBIAR CATEGORÍA</button><div style={{marginTop:14,textAlign:"center",position:"relative",zIndex:1}}><span style={{fontSize:"0.5rem",color:"rgba(255,255,255,0.25)",letterSpacing:1.5,fontFamily:F.bar}}>{teams.length} EQUIPOS · {players.length} JUGADORES · {matches.filter(m=>m.estatus==="finalizado").length} PARTIDOS</span></div></div>);}
+function MenuBtn({icon,label,desc,color,onClick}){const[h,setH]=useState(false);return<button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{width:"100%",padding:"15px 18px",borderRadius:14,border:`1.5px solid ${h?color:color+"55"}`,background:h?color:"rgba(255,255,255,0.04)",color:h?"white":"rgba(255,255,255,0.85)",cursor:"pointer",display:"flex",alignItems:"center",gap:14,transition:"all 0.2s",transform:h?"translateY(-1px)":"none",boxShadow:h?`0 6px 20px ${color}55`:"none"}}><span style={{fontSize:"1.3rem",width:32,textAlign:"center"}}>{icon}</span><div style={{textAlign:"left"}}><div style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.85rem",letterSpacing:1}}>{label}</div><div style={{fontSize:"0.5rem",opacity:0.6,marginTop:1}}>{desc}</div></div></button>;}
 
 // ═══════════════ ADMIN ═══════════════
-function AdminView({ teams, setTeams, players, setPlayers, allPlayers, setAllPlayers, onBack, showToast, genero, genLabel, genColor }) {
-  const [sub, setSub] = useState("teams");
-  const [selTeam, setSelTeam] = useState(null);
-  const [tName, setTName] = useState(""); const [tGrupo, setTGrupo] = useState("A"); const [tColor, setTColor] = useState(COLORS[0]); const [editTId, setEditTId] = useState(null);
-  const [pName, setPName] = useState(""); const [pNum, setPNum] = useState("");
-  const [editPId, setEditPId] = useState(null); const [epName, setEpName] = useState(""); const [epNum, setEpNum] = useState("");
+function AdminView({teams,setTeams,players,allPlayers,setAllPlayers,onBack,showToast,genero,genLabel,genColor}){const[sub,setSub]=useState("teams");const[selTeam,setSelTeam]=useState(null);const[tName,setTName]=useState("");const[tGrupo,setTGrupo]=useState("A");const[tColor,setTColor]=useState(COLORS[0]);const[tLogo,setTLogo]=useState(null);const[editTId,setEditTId]=useState(null);const[pName,setPName]=useState("");const[pNum,setPNum]=useState("");const[editPId,setEditPId]=useState(null);const[epName,setEpName]=useState("");const[epNum,setEpNum]=useState("");const[confirmDel,setConfirmDel]=useState(null);const logoRef=useRef(null);
+  const handleLogo=(e)=>{const file=e.target.files?.[0];if(!file)return;if(file.size>500000)return showToast("Máx 500KB","#ef4444");const reader=new FileReader();reader.onload=ev=>{const img=new Image();img.onload=()=>{const canvas=document.createElement('canvas');const max=120;let w=img.width,h=img.height;if(w>h){if(w>max){h=h*(max/w);w=max;}}else{if(h>max){w=w*(max/h);h=max;}}canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h);setTLogo(canvas.toDataURL('image/jpeg',0.7));};img.src=ev.target.result;};reader.readAsDataURL(file);};
+  const addTeam=()=>{if(!tName.trim())return showToast("Falta nombre","#ef4444");if(teams.some(t=>t.nombre===tName.trim().toUpperCase()&&t.id!==editTId))return showToast("Nombre repetido","#ef4444");if(editTId){setTeams(p=>p.map(t=>t.id===editTId?{...t,nombre:tName.trim().toUpperCase(),grupo:tGrupo,color:tColor,logo:tLogo||t.logo||null}:t));showToast("✅ Editado");setEditTId(null);}else{setTeams(p=>[...p,{id:genId(),nombre:tName.trim().toUpperCase(),grupo:tGrupo,color:tColor,logo:tLogo||null,genero}]);showToast("✅ Creado");}setTName("");setTGrupo("A");setTColor(COLORS[0]);setTLogo(null);};
+  const addPlayer=()=>{if(!pName.trim()||!pNum.trim())return showToast("Faltan datos","#ef4444");const num=parseInt(pNum);const tp=allPlayers.filter(p=>p.equipoId===selTeam?.id);if(tp.length>=4)return showToast("Máx 4","#ef4444");if(tp.some(p=>p.numero===num))return showToast(`#${num} ya existe`,"#ef4444");setAllPlayers(p=>[...p,{id:genId(),nombre:pName.trim().toUpperCase(),numero:num,equipoId:selTeam?.id}]);setPName("");setPNum("");showToast("✅ Agregado");};
+  if(sub==="roster"&&selTeam){const tp=allPlayers.filter(p=>p.equipoId===selTeam.id).sort((a,b)=>a.numero-b.numero);return(<div style={S.page}><Hdr title={`📋 ${selTeam.nombre}`} onBack={()=>setSub("teams")} color={selTeam.color}/><div style={{padding:14,maxWidth:480,margin:"0 auto",width:"100%"}}><div style={{...S.card,padding:14,marginBottom:12}}><p style={{...S.lbl,marginBottom:8,fontSize:"0.68rem"}}>AGREGAR ({tp.length}/4)</p><div style={{display:"flex",gap:6}}><input type="number" placeholder="#" value={pNum} onChange={e=>setPNum(e.target.value)} style={{...S.inp,width:48,textAlign:"center",fontWeight:900}}/><input type="text" placeholder="Nombre y Apellido" value={pName} onChange={e=>setPName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addPlayer()} style={{...S.inp,flex:1}}/><button onClick={addPlayer} style={{...S.btnSm,background:"#10b981"}}>+</button></div></div><div style={S.card}>{tp.length===0?<div style={{padding:28,textAlign:"center",color:"#94a3b8",fontSize:"0.76rem"}}>Sin jugadores</div>:tp.map(p=>(<div key={p.id} style={{padding:"10px 14px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:8}}>{editPId===p.id?<><input type="number" value={epNum} onChange={e=>setEpNum(e.target.value)} style={{...S.inp,width:44,textAlign:"center",fontWeight:900,padding:"5px 3px"}}/><input type="text" value={epName} onChange={e=>setEpName(e.target.value)} style={{...S.inp,flex:1,padding:"5px 7px"}}/><button onClick={()=>{if(!epName.trim()||!epNum.trim())return;setAllPlayers(p2=>p2.map(pl=>pl.id===p.id?{...pl,nombre:epName.trim().toUpperCase(),numero:parseInt(epNum)}:pl));setEditPId(null);showToast("✅");}} style={{...S.btnSm,background:"#10b981",fontSize:"0.75rem"}}>✓</button><button onClick={()=>setEditPId(null)} style={{...S.btnSm,background:"#94a3b8",fontSize:"0.75rem"}}>✕</button></>:<><span style={{background:selTeam.color,color:"white",padding:"2px 7px",borderRadius:5,fontWeight:900,fontSize:"0.8rem",minWidth:28,textAlign:"center"}}>{p.numero}</span><span style={{flex:1,fontWeight:600,fontSize:"0.82rem",color:"#1e293b"}}>{p.nombre}</span><button onClick={()=>{setEditPId(p.id);setEpName(p.nombre);setEpNum(String(p.numero));}} style={S.iconBtn}>✏️</button><button onClick={()=>{setAllPlayers(pr=>pr.filter(pl=>pl.id!==p.id));showToast("🗑️","#ef4444");}} style={S.iconBtn}>🗑️</button></>}</div>))}</div></div></div>);}
+  return(<div style={S.page}><Hdr title={`🛡️ EQUIPOS ${genLabel}`} onBack={onBack} color={genColor}/>{confirmDel&&<CModal msg={confirmDel.msg} onOk={()=>{confirmDel.fn();setConfirmDel(null);}} onNo={()=>setConfirmDel(null)}/>}<div style={{padding:14,maxWidth:480,margin:"0 auto",width:"100%"}}><div style={{...S.card,padding:14,marginBottom:14}}><p style={{...S.lbl,marginBottom:8,fontSize:"0.68rem"}}>{editTId?"EDITAR":"NUEVO"} EQUIPO</p><input type="text" placeholder="Nombre del equipo" value={tName} onChange={e=>setTName(e.target.value.toUpperCase())} style={{...S.inp,marginBottom:8}}/><div style={{display:"flex",gap:8,marginBottom:8}}><div style={{flex:1}}><label style={S.lbl}>GRUPO</label><select value={tGrupo} onChange={e=>setTGrupo(e.target.value)} style={S.inp}>{GRUPOS.map(g=><option key={g} value={g}>Grupo {g}</option>)}</select></div><div style={{flex:1}}><label style={S.lbl}>COLOR</label><div style={{display:"flex",gap:3,flexWrap:"wrap",marginTop:3}}>{COLORS.map(c=><div key={c} onClick={()=>setTColor(c)} style={{width:19,height:19,borderRadius:"50%",background:c,cursor:"pointer",border:tColor===c?"3px solid #0f172a":"2px solid transparent"}}/>)}</div></div></div><div style={{display:"flex",gap:6}}>{editTId&&<button onClick={()=>{setEditTId(null);setTName("");setTLogo(null);}} style={{...S.btnFull,background:"#e2e8f0",color:"#64748b",flex:1}}>CANCELAR</button>}<button onClick={addTeam} style={{...S.btnFull,background:genColor,flex:2}}>{editTId?"💾 GUARDAR":"➕ CREAR"}</button></div><div style={{marginTop:8,display:"flex",alignItems:"center",gap:10}}><input ref={logoRef} type="file" accept="image/*" onChange={handleLogo} style={{display:"none"}}/>{tLogo?<img src={tLogo} alt="" style={{width:40,height:40,borderRadius:"50%",objectFit:"cover",border:`2px solid ${tColor}`}}/>:<div style={{width:40,height:40,borderRadius:"50%",background:tColor,display:"flex",alignItems:"center",justifyContent:"center",color:txtC(tColor),fontWeight:900,fontSize:"0.55rem"}}>{(tName||"??").slice(0,2)}</div>}<button onClick={()=>logoRef.current?.click()} style={{background:"#f1f5f9",border:"1px solid #e2e8f0",padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:"0.56rem",fontWeight:700,color:"#64748b"}}>📷 {tLogo?"Cambiar":"Subir"} Logo</button>{tLogo&&<button onClick={()=>setTLogo(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:"0.7rem",color:"#ef4444"}}>✕</button>}<span style={{fontSize:"0.42rem",color:"#94a3b8"}}>Opcional · máx 500KB</span></div></div>{teams.length===0?<Empty icon="🏀" title="Sin equipos" desc={`Crea equipos para ${genLabel}`}/>:GRUPOS.map(g=>{const gt=teams.filter(t=>t.grupo===g);if(!gt.length)return null;return(<div key={g}><div style={{fontSize:"0.56rem",fontWeight:900,color:GRUPO_COLORS[g],letterSpacing:1.5,marginBottom:4,marginTop:8,fontFamily:F.bar}}>GRUPO {g}</div>{gt.map(t=>{const cnt=allPlayers.filter(p=>p.equipoId===t.id).length;return(<div key={t.id} style={{...S.card,marginBottom:6,display:"flex",alignItems:"center",padding:"10px 12px",gap:10}}><TB team={t} size={34} fontSize="0.6rem"/><div style={{flex:1}}><div style={{fontWeight:800,fontSize:"0.82rem",color:"#1e293b"}}>{t.nombre}</div><div style={{fontSize:"0.55rem",color:"#94a3b8"}}>{cnt}/4</div></div><button onClick={()=>{setSelTeam(t);setSub("roster");}} style={{...S.btnSm,background:t.color,fontSize:"0.52rem",fontWeight:800,padding:"5px 8px"}}>📋</button><button onClick={()=>{setEditTId(t.id);setTName(t.nombre);setTGrupo(t.grupo);setTColor(t.color);setTLogo(t.logo||null);}} style={S.iconBtn}>✏️</button><button onClick={()=>setConfirmDel({msg:`¿Eliminar "${t.nombre}"?`,fn:()=>{setTeams(p=>p.filter(x=>x.id!==t.id));setAllPlayers(p=>p.filter(x=>x.equipoId!==t.id));showToast("🗑️","#ef4444");}})} style={S.iconBtn}>🗑️</button></div>);})}</div>);})}</div></div>);}
 
-  const addTeam = () => {
-    if (!tName.trim()) return showToast("Falta nombre","#ef4444");
-    if (teams.some(t=>t.nombre===tName.trim().toUpperCase()&&t.id!==editTId)) return showToast("Nombre repetido","#ef4444");
-    if (editTId) { setTeams(p=>p.map(t=>t.id===editTId?{...t,nombre:tName.trim().toUpperCase(),grupo:tGrupo,color:tColor}:t)); showToast("✅ Editado"); setEditTId(null); }
-    else { setTeams(p=>[...p,{id:genId(),nombre:tName.trim().toUpperCase(),grupo:tGrupo,color:tColor,genero}]); showToast("✅ Creado"); }
-    setTName(""); setTGrupo("A"); setTColor(COLORS[0]);
-  };
-
-  const addPlayer = () => {
-    if (!pName.trim()||!pNum.trim()) return showToast("Faltan datos","#ef4444");
-    const num=parseInt(pNum); const tp=allPlayers.filter(p=>p.equipoId===selTeam.id);
-    if (tp.length>=4) return showToast("Máx 4 jugadores","#ef4444");
-    if (tp.some(p=>p.numero===num)) return showToast(`#${num} ya existe`,"#ef4444");
-    setAllPlayers(p=>[...p,{id:genId(),nombre:pName.trim().toUpperCase(),numero:num,equipoId:selTeam.id}]);
-    setPName(""); setPNum(""); showToast("✅ Agregado");
-  };
-
-  if (sub==="roster" && selTeam) {
-    const tp = allPlayers.filter(p=>p.equipoId===selTeam.id).sort((a,b)=>a.numero-b.numero);
-    return (
-      <div style={S.page}>
-        <Hdr title={`📋 ${selTeam.nombre}`} onBack={()=>setSub("teams")} color={selTeam.color} />
-        <div style={{ padding:14, maxWidth:480, margin:"0 auto", width:"100%" }}>
-          <div style={{...S.card, padding:14, marginBottom:12 }}>
-            <p style={{...S.lbl, marginBottom:8, fontSize:"0.68rem"}}>AGREGAR JUGADOR ({tp.length}/4)</p>
-            <div style={{ display:"flex", gap:6 }}>
-              <input type="number" placeholder="#" value={pNum} onChange={e=>setPNum(e.target.value)} style={{...S.inp, width:48, textAlign:"center", fontWeight:900}} />
-              <input type="text" placeholder="Nombre y Apellido" value={pName} onChange={e=>setPName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addPlayer()} style={{...S.inp, flex:1}} />
-              <button onClick={addPlayer} style={{...S.btnSm, background:"#10b981"}}>+</button>
-            </div>
+// ═══════════════ CALENDARIO ═══════════════
+function CalendarView({teams,matches,allTeams,onGenerarCalendario,onIniciarPartido,setMesaStep,onNav,onBack,genLabel,genColor}){
+  const ag=GRUPOS.filter(g=>teams.some(t=>t.grupo===g));
+  return(<div style={S.page}><Hdr title={`📅 CALENDARIO ${genLabel}`} onBack={onBack} color={genColor}/>
+    <div style={{padding:"12px 10px 80px"}}>
+      {ag.length===0?<Empty icon="📅" title="Sin equipos" desc="Registra equipos primero"/>:
+      ag.map(g=>{
+        const gt=teams.filter(t=>t.grupo===g);
+        const gMatches=matches.filter(m=>{const lT=allTeams.find(t=>t.id===m.localId);const vT=allTeams.find(t=>t.id===m.visitId);return lT?.grupo===g&&vT?.grupo===g;});
+        const prog=gMatches.filter(m=>m.estatus==="programado");
+        const fin=gMatches.filter(m=>m.estatus==="finalizado");
+        return(<div key={g} style={{...S.card,borderTop:`3px solid ${GRUPO_COLORS[g]}`,marginBottom:14}}>
+          <div style={{padding:"9px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.8rem",color:GRUPO_COLORS[g],letterSpacing:1.5}}>🏀 GRUPO {g}</span>
+            <button onClick={()=>onGenerarCalendario(g)} style={{background:GRUPO_COLORS[g],color:"white",border:"none",padding:"5px 10px",borderRadius:6,fontWeight:800,fontSize:"0.52rem",cursor:"pointer",fontFamily:F.bar,letterSpacing:0.5}}>⚡ GENERAR</button>
           </div>
-          <div style={S.card}>
-            {tp.length===0 ? <div style={{ padding:28, textAlign:"center", color:"#94a3b8", fontSize:"0.76rem" }}>Sin jugadores</div> :
-            tp.map(p => (
-              <div key={p.id} style={{ padding:"10px 14px", borderBottom:"1px solid #f1f5f9", display:"flex", alignItems:"center", gap:8 }}>
-                {editPId===p.id ? <>
-                  <input type="number" value={epNum} onChange={e=>setEpNum(e.target.value)} style={{...S.inp, width:44, textAlign:"center", fontWeight:900, padding:"5px 3px"}} />
-                  <input type="text" value={epName} onChange={e=>setEpName(e.target.value)} style={{...S.inp, flex:1, padding:"5px 7px"}} />
-                  <button onClick={()=>{if(!epName.trim()||!epNum.trim())return; setAllPlayers(p2=>p2.map(pl=>pl.id===p.id?{...pl,nombre:epName.trim().toUpperCase(),numero:parseInt(epNum)}:pl)); setEditPId(null); showToast("✅");}} style={{...S.btnSm, background:"#10b981", fontSize:"0.75rem"}}>✓</button>
-                  <button onClick={()=>setEditPId(null)} style={{...S.btnSm, background:"#94a3b8", fontSize:"0.75rem"}}>✕</button>
-                </> : <>
-                  <span style={{ background:selTeam.color, color:"white", padding:"2px 7px", borderRadius:5, fontWeight:900, fontSize:"0.8rem", minWidth:28, textAlign:"center" }}>{p.numero}</span>
-                  <span style={{ flex:1, fontWeight:600, fontSize:"0.82rem", color:"#1e293b" }}>{p.nombre}</span>
-                  <button onClick={()=>{setEditPId(p.id);setEpName(p.nombre);setEpNum(String(p.numero));}} style={S.iconBtn}>✏️</button>
-                  <button onClick={()=>{setAllPlayers(pr=>pr.filter(pl=>pl.id!==p.id));showToast("🗑️","#ef4444");}} style={S.iconBtn}>🗑️</button>
-                </>}
+          {gMatches.length===0?<div style={{padding:20,textAlign:"center",color:"#94a3b8",fontSize:"0.7rem"}}>Presiona GENERAR ({gt.length} equipos)</div>:
+          <div>
+            {fin.length>0&&<div style={{padding:"4px 12px",fontSize:"0.46rem",fontWeight:900,color:"#10b981",letterSpacing:1,fontFamily:F.bar}}>FINALIZADOS ({fin.length})</div>}
+            {fin.map(m=>{const lT=allTeams.find(t=>t.id===m.localId);const vT=allTeams.find(t=>t.id===m.visitId);return(
+              <div key={m.id} style={{padding:"8px 12px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:6}}>
+                <div style={{width:8,height:8,borderRadius:"50%",background:"#10b981",flexShrink:0}}/>
+                <span style={{flex:1,fontWeight:700,fontSize:"0.7rem",color:"#1e293b"}}>{lT?.nombre||"?"}</span>
+                <span style={{fontWeight:900,color:"#1e293b",fontSize:"0.8rem",padding:"2px 8px",background:"#f1f5f9",borderRadius:5}}>{m.marcadorL||0} - {m.marcadorV||0}</span>
+                <span style={{flex:1,fontWeight:700,fontSize:"0.7rem",color:"#1e293b",textAlign:"right"}}>{vT?.nombre||"?"}</span>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={S.page}>
-      <Hdr title={`🛡️ EQUIPOS ${genLabel}`} onBack={onBack} color={genColor} />
-      <div style={{ padding:14, maxWidth:480, margin:"0 auto", width:"100%" }}>
-        <div style={{...S.card, padding:14, marginBottom:14 }}>
-          <p style={{...S.lbl, marginBottom:8, fontSize:"0.68rem"}}>{editTId?"EDITAR":"NUEVO"} EQUIPO</p>
-          <input type="text" placeholder="Nombre del equipo" value={tName} onChange={e=>setTName(e.target.value.toUpperCase())} style={{...S.inp, marginBottom:8}} />
-          <div style={{ display:"flex", gap:8, marginBottom:8 }}>
-            <div style={{ flex:1 }}><label style={S.lbl}>GRUPO</label><select value={tGrupo} onChange={e=>setTGrupo(e.target.value)} style={S.inp}>{GRUPOS.map(g=><option key={g} value={g}>Grupo {g}</option>)}</select></div>
-            <div style={{ flex:1 }}><label style={S.lbl}>COLOR</label><div style={{ display:"flex", gap:3, flexWrap:"wrap", marginTop:3 }}>{COLORS.map(c=><div key={c} onClick={()=>setTColor(c)} style={{ width:19, height:19, borderRadius:"50%", background:c, cursor:"pointer", border:tColor===c?"3px solid #0f172a":"2px solid transparent" }} />)}</div></div>
-          </div>
-          <div style={{ display:"flex", gap:6 }}>
-            {editTId && <button onClick={()=>{setEditTId(null);setTName("");}} style={{...S.btnFull, background:"#e2e8f0", color:"#64748b", flex:1}}>CANCELAR</button>}
-            <button onClick={addTeam} style={{...S.btnFull, background:genColor, flex:2}}>{editTId?"💾 GUARDAR":"➕ CREAR"}</button>
-          </div>
-        </div>
-        {teams.length===0 ? <Empty icon="🏀" title="Sin equipos" desc={`Crea equipos para ${genLabel}`} /> :
-        GRUPOS.map(g => { const gt=teams.filter(t=>t.grupo===g); if(!gt.length)return null; return (
-          <div key={g}><div style={{ fontSize:"0.56rem", fontWeight:900, color:GRUPO_COLORS[g], letterSpacing:1.5, marginBottom:4, marginTop:8, fontFamily:F.bar }}>GRUPO {g}</div>
-          {gt.map(t => { const cnt=allPlayers.filter(p=>p.equipoId===t.id).length; return (
-            <div key={t.id} style={{...S.card, marginBottom:6, display:"flex", alignItems:"center", padding:"10px 12px", gap:10 }}>
-              <div style={{ width:34, height:34, borderRadius:"50%", background:t.color, display:"flex", alignItems:"center", justifyContent:"center", color:"white", fontWeight:900, fontSize:"0.6rem", flexShrink:0 }}>{t.nombre.slice(0,2)}</div>
-              <div style={{ flex:1 }}><div style={{ fontWeight:800, fontSize:"0.82rem", color:"#1e293b" }}>{t.nombre}</div><div style={{ fontSize:"0.55rem", color:"#94a3b8" }}>{cnt}/4 jugadores</div></div>
-              <button onClick={()=>{setSelTeam(t);setSub("roster");}} style={{...S.btnSm, background:t.color, fontSize:"0.52rem", fontWeight:800, padding:"5px 8px"}}>📋</button>
-              <button onClick={()=>{setEditTId(t.id);setTName(t.nombre);setTGrupo(t.grupo);setTColor(t.color);}} style={S.iconBtn}>✏️</button>
-              <button onClick={()=>{setTeams(p=>p.filter(x=>x.id!==t.id));setAllPlayers(p=>p.filter(x=>x.equipoId!==t.id));showToast("🗑️","#ef4444");}} style={S.iconBtn}>🗑️</button>
-            </div>
-          )})}</div>
-        )})}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════ POSICIONES ═══════════════
-function StandingsView({ calcStandings, onBack, genLabel, genColor, teams }) {
-  const activeGrupos = GRUPOS.filter(g => teams.some(t => t.grupo === g));
-  return (
-    <div style={S.page}>
-      <Hdr title={`📊 ${genLabel}`} onBack={onBack} color={genColor} />
-      <div style={{ padding:"12px 10px 80px" }}>
-        {activeGrupos.length===0 ? <Empty icon="📊" title="Sin equipos" desc="Registra equipos primero" /> :
-        activeGrupos.map(g => <GrpTable key={g} teams={calcStandings(g)} label={`GRUPO ${g}`} color={GRUPO_COLORS[g]} />)}
-      </div>
-    </div>
-  );
-}
-function GrpTable({ teams, label, color }) {
-  if (teams.length===0) return null;
-  return (
-    <div style={{...S.card, borderTop:`3px solid ${color}`, marginBottom:14 }}>
-      <div style={{ padding:"9px 12px", fontFamily:F.bar, fontWeight:800, fontSize:"0.8rem", color, letterSpacing:1.5 }}>🏀 {label}</div>
-      <div style={{ overflowX:"auto" }}>
-        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"0.72rem", minWidth:360 }}>
-          <thead><tr style={{ background:"#f8fafc", color:"#94a3b8", fontSize:"0.48rem", letterSpacing:1, textTransform:"uppercase" }}>
-            <th style={S.th}>#</th><th style={{...S.th, textAlign:"left"}}>Equipo</th><th style={S.th}>JJ</th><th style={S.th}>JG</th><th style={S.th}>JP</th><th style={S.th}>DIF</th><th style={{...S.th, background:`${color}15`, color, fontWeight:900}}>PTS</th>
-          </tr></thead>
-          <tbody>{teams.map((eq,i)=>(
-            <tr key={eq.id} style={{ borderBottom:"1px solid #f1f5f9", background:i<2?`${color}06`:"transparent" }}>
-              <td style={S.td}><div style={{ width:20, height:20, borderRadius:"50%", background:i<2?color:"#f1f5f9", color:i<2?"white":"#94a3b8", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.55rem", fontWeight:900, margin:"0 auto" }}>{i+1}</div></td>
-              <td style={{...S.td, textAlign:"left"}}><div style={{ display:"flex", alignItems:"center", gap:5 }}><div style={{ width:20, height:20, borderRadius:"50%", background:eq.color, display:"flex", alignItems:"center", justifyContent:"center", color:"white", fontWeight:900, fontSize:"0.42rem", flexShrink:0 }}>{eq.nombre.slice(0,2)}</div><span style={{ fontWeight:700, fontSize:"0.66rem", color:"#1e293b" }}>{eq.nombre}</span></div></td>
-              <td style={{...S.td, color:"#64748b"}}>{eq.jj}</td><td style={{...S.td, color:"#10b981", fontWeight:700}}>{eq.jg}</td><td style={{...S.td, color:"#ef4444", fontWeight:700}}>{eq.jp}</td>
-              <td style={{...S.td, color:eq.dif>=0?"#3b82f6":"#ef4444", fontWeight:700}}>{eq.dif>0?`+${eq.dif}`:eq.dif}</td>
-              <td style={{...S.td, fontWeight:900, fontSize:"0.85rem", color}}>{eq.pts}</td>
-            </tr>
-          ))}</tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════ MESA TÉCNICA ═══════════════
-function MesaView({ step, teams, players, mesaMatch, matches, statsPartido, jugadas, allJugadas, onCrearPartido, onStat, onUndo, onFinalizar, onBack, setMesaStep, setMesaMatch, genColor }) {
-  const [localId,setLocalId]=useState(""); const [visitId,setVisitId]=useState("");
-  const [showHist,setShowHist]=useState(false); const [confirmFin,setConfirmFin]=useState(false);
-
-  if (step==="select") {
-    const ec=matches.filter(m=>m.estatus==="programado");
-    return (
-      <div style={S.page}>
-        <Hdr title="⏱️ MESA TÉCNICA" onBack={onBack} color={genColor} />
-        <div style={{ padding:14, maxWidth:440, margin:"0 auto", width:"100%" }}>
-          {teams.length<2 ? <Empty icon="⏱️" title="Necesitas 2+ equipos" desc="Registra equipos primero" /> :
-          <div style={{...S.card, padding:14 }}>
-            <p style={{ fontFamily:F.bar, fontWeight:700, fontSize:"0.78rem", color:"#1e293b", marginBottom:10 }}>CREAR PARTIDO</p>
-            <label style={S.lbl}>Equipo Local</label>
-            <select style={S.inp} value={localId} onChange={e=>setLocalId(e.target.value)}><option value="">Seleccionar...</option>{teams.map(t=><option key={t.id} value={t.id}>{t.nombre}</option>)}</select>
-            <label style={{...S.lbl, marginTop:8}}>Equipo Visitante</label>
-            <select style={S.inp} value={visitId} onChange={e=>setVisitId(e.target.value)}><option value="">Seleccionar...</option>{teams.filter(t=>t.id!==localId).map(t=><option key={t.id} value={t.id}>{t.nombre}</option>)}</select>
-            <button onClick={()=>{if(localId&&visitId)onCrearPartido(localId,visitId);}} disabled={!localId||!visitId} style={{...S.btnFull, marginTop:12, background:localId&&visitId?"#7c3aed":"#e2e8f0", color:localId&&visitId?"white":"#94a3b8"}}>🏀 INICIAR</button>
-          </div>}
-          {ec.length>0 && <div style={{...S.card, marginTop:10}}>
-            <div style={{ padding:"8px 14px", fontFamily:F.bar, fontWeight:800, fontSize:"0.68rem", color:"#7c3aed", borderBottom:"1px solid #f1f5f9" }}>EN CURSO</div>
-            {ec.map(m=>{const l=teams.find(t=>t.id===m.localId);const v=teams.find(t=>t.id===m.visitId);return(
-              <button key={m.id} onClick={()=>{setMesaMatch(m);setMesaStep("active");}} style={{ width:"100%", padding:"10px 14px", background:"white", border:"none", borderBottom:"1px solid #f1f5f9", cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <span style={{ fontWeight:700, fontSize:"0.72rem", color:"#1e293b" }}>{l?.nombre} vs {v?.nombre}</span>
-                <span style={{ fontWeight:900, color:"#7c3aed", fontSize:"0.8rem" }}>{m.marcadorL||0} - {m.marcadorV||0}</span>
-              </button>
-            )})}
-          </div>}
-        </div>
-      </div>
-    );
-  }
-
-  const cur=matches.find(m=>m.id===mesaMatch?.id)||mesaMatch;
-  const lT=teams.find(t=>t.id===cur?.localId); const vT=teams.find(t=>t.id===cur?.visitId);
-  const lP=players.filter(p=>p.equipoId===cur?.localId); const vP=players.filter(p=>p.equipoId===cur?.visitId);
-  const ms=statsPartido.filter(s=>s.matchId===cur?.id);
-  const mj=allJugadas.filter(j=>j.matchId===cur?.id);
-  const gs=pid=>ms.find(s=>s.jugadorId===pid)||{};
-
-  return (
-    <div style={{ background:"#0a0a0a", minHeight:"100vh", display:"flex", flexDirection:"column", color:"white" }}>
-      {confirmFin && <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", zIndex:9000, display:"flex", alignItems:"center", justifyContent:"center", padding:18 }}>
-        <div style={{ background:"#1e293b", borderRadius:14, padding:22, maxWidth:280, width:"100%", border:"1px solid #334155" }}>
-          <p style={{ color:"white", fontWeight:700, fontSize:"0.85rem", textAlign:"center", marginBottom:18, lineHeight:1.5 }}>¿FINALIZAR?<br/><span style={{ fontSize:"0.66rem", color:"#94a3b8" }}>{lT?.nombre} {cur?.marcadorL} - {cur?.marcadorV} {vT?.nombre}</span></p>
-          <div style={{ display:"flex", gap:8 }}>
-            <button onClick={()=>setConfirmFin(false)} style={{ flex:1, padding:10, background:"#334155", color:"#94a3b8", border:"none", borderRadius:7, fontWeight:700, fontSize:"0.7rem", cursor:"pointer" }}>CANCELAR</button>
-            <button onClick={()=>{setConfirmFin(false);onFinalizar();}} style={{ flex:1, padding:10, background:"#10b981", color:"white", border:"none", borderRadius:7, fontWeight:900, fontSize:"0.7rem", cursor:"pointer" }}>CONFIRMAR</button>
-          </div>
-        </div>
-      </div>}
-
-      <div style={{ background:"#111", padding:"10px 12px", display:"flex", alignItems:"center", justifyContent:"center", gap:10, borderBottom:"2px solid #1e293b" }}>
-        <div style={{ textAlign:"right", flex:1 }}><div style={{ fontFamily:F.bar, fontWeight:800, fontSize:"0.66rem", color:lT?.color }}>{lT?.nombre}</div></div>
-        <div style={{ display:"flex", alignItems:"center", gap:8, background:"#1e293b", padding:"5px 16px", borderRadius:10 }}>
-          <span style={{ fontSize:"1.7rem", fontWeight:900, fontFamily:F.bar }}>{cur?.marcadorL||0}</span>
-          <span style={{ fontSize:"0.5rem", color:"#475569" }}>VS</span>
-          <span style={{ fontSize:"1.7rem", fontWeight:900, fontFamily:F.bar }}>{cur?.marcadorV||0}</span>
-        </div>
-        <div style={{ textAlign:"left", flex:1 }}><div style={{ fontFamily:F.bar, fontWeight:800, fontSize:"0.66rem", color:vT?.color }}>{vT?.nombre}</div></div>
-      </div>
-
-      <div style={{ flex:1, display:"flex", overflow:"hidden" }}>
-        <div style={{ flex:1, padding:"5px 4px", borderRight:"1px solid #1e293b", overflowY:"auto" }}>
-          <div style={{ textAlign:"center", marginBottom:4, background:`${lT?.color}33`, padding:"3px 0", borderRadius:5, fontSize:"0.52rem", fontWeight:900, color:lT?.color }}>LOCAL</div>
-          {lP.length===0?<NoPl/>:lP.map(p=><PCard key={p.id} player={p} team="local" tc={lT?.color} stats={gs(p.id)} onStat={onStat}/>)}
-        </div>
-        <div style={{ flex:1, padding:"5px 4px", overflowY:"auto" }}>
-          <div style={{ textAlign:"center", marginBottom:4, background:`${vT?.color}33`, padding:"3px 0", borderRadius:5, fontSize:"0.52rem", fontWeight:900, color:vT?.color }}>VISITANTE</div>
-          {vP.length===0?<NoPl/>:vP.map(p=><PCard key={p.id} player={p} team="visit" tc={vT?.color} stats={gs(p.id)} onStat={onStat}/>)}
-        </div>
-      </div>
-
-      <div style={{ padding:"7px 8px", background:"#0f172a", display:"flex", gap:5, borderTop:"2px solid #1e293b" }}>
-        <button onClick={()=>setMesaStep("select")} style={mBtn("#334155")}>SALIR</button>
-        <button onClick={onUndo} style={mBtn("#92400e")}>↩️</button>
-        <button onClick={()=>setShowHist(true)} style={mBtn("#334155")}>📜</button>
-        <button onClick={()=>setConfirmFin(true)} style={{...mBtn("#065f46"), flex:2, fontWeight:900}}>✅ FINALIZAR</button>
-      </div>
-
-      {showHist && <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.92)", zIndex:4000, display:"flex", justifyContent:"center", alignItems:"center", padding:14 }}>
-        <div style={{ background:"#1e293b", width:"100%", maxWidth:360, borderRadius:12, overflow:"hidden", maxHeight:"70vh", display:"flex", flexDirection:"column" }}>
-          <div style={{ padding:"10px 16px", background:"#0f172a", display:"flex", justifyContent:"space-between", alignItems:"center", fontWeight:900, fontSize:"0.72rem" }}><span>📜 HISTORIAL</span><button onClick={()=>setShowHist(false)} style={{ background:"#334155", border:"none", color:"white", borderRadius:"50%", width:24, height:24, cursor:"pointer", fontSize:"0.66rem" }}>✕</button></div>
-          <div style={{ overflowY:"auto", flex:1, padding:6 }}>
-            {mj.length===0?<p style={{ textAlign:"center", color:"#475569", padding:16, fontSize:"0.7rem" }}>Sin jugadas</p>:
-            mj.map((j,i)=>(
-              <div key={j.id} style={{ padding:"6px 10px", marginBottom:2, borderRadius:5, background:i===0?"#0f2d1f":"#0f172a", border:`1px solid ${i===0?"#10b981":"#1e293b"}`, display:"flex", justifyContent:"space-between", alignItems:"center", gap:5 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:5, flex:1, minWidth:0 }}>
-                  <span style={{ background:j.equipo==="local"?"#1e3a8a":"#7f1d1d", color:"white", padding:"1px 5px", borderRadius:3, fontWeight:900, fontSize:"0.58rem", flexShrink:0 }}>#{j.jugadorNumero}</span>
-                  <span style={{ fontWeight:700, fontSize:"0.64rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{j.jugadorNombre}</span>
-                </div>
-                <span style={{ fontWeight:900, color:"#10b981", fontSize:"0.62rem", flexShrink:0 }}>+{j.puntos}</span>
+            );})}
+            {prog.length>0&&<div style={{padding:"4px 12px",fontSize:"0.46rem",fontWeight:900,color:"#f59e0b",letterSpacing:1,fontFamily:F.bar,marginTop:fin.length?4:0}}>PENDIENTES ({prog.length})</div>}
+            {prog.map(m=>{const lT=allTeams.find(t=>t.id===m.localId);const vT=allTeams.find(t=>t.id===m.visitId);return(
+              <div key={m.id} style={{padding:"8px 12px",borderBottom:"1px solid #f1f5f9",display:"flex",alignItems:"center",gap:6}}>
+                <div style={{width:8,height:8,borderRadius:"50%",background:"#f59e0b",flexShrink:0}}/>
+                <span style={{flex:1,fontWeight:700,fontSize:"0.7rem",color:"#64748b"}}>{lT?.nombre||"?"}</span>
+                <span style={{fontSize:"0.56rem",color:"#94a3b8",fontWeight:700}}>VS</span>
+                <span style={{flex:1,fontWeight:700,fontSize:"0.7rem",color:"#64748b",textAlign:"right"}}>{vT?.nombre||"?"}</span>
+                <button onClick={()=>{onIniciarPartido(m);setMesaStep("active");onNav("mesa");}} style={{background:"#7c3aed",color:"white",border:"none",padding:"4px 8px",borderRadius:5,fontWeight:900,fontSize:"0.5rem",cursor:"pointer",flexShrink:0}}>▶️</button>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>}
+            );})}
+          </div>}
+        </div>);
+      })}
     </div>
-  );
+  </div>);
 }
-function NoPl(){return <p style={{ textAlign:"center", color:"#475569", fontSize:"0.58rem", padding:10 }}>Sin jugadores</p>}
-function PCard({ player, team, tc, stats, onStat }) {
-  const s=stats||{}; const [fl,setFl]=useState(null);
-  const click = pts => { onStat(player,team,pts); setFl(pts); setTimeout(()=>setFl(null),200); };
-  return (
-    <div style={{ marginBottom:5, padding:"7px 7px 5px", borderRadius:8, background:"#1a1a1a", border:"1px solid #2d2d2d" }}>
-      <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:5 }}>
-        <span style={{ background:tc, color:"white", padding:"2px 6px", borderRadius:4, fontWeight:900, fontSize:"0.72rem", minWidth:22, textAlign:"center" }}>{player.numero}</span>
-        <span style={{ fontWeight:700, color:"white", fontSize:"0.7rem", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{player.nombre}</span>
-        <span style={{ fontFamily:F.bar, fontWeight:900, fontSize:"0.95rem", color:"#fbbf24" }}>{s.puntos||0}</span>
-      </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:4 }}>
-        <button onClick={()=>click(1)} style={{ padding:"9px 4px", background:fl===1?"white":"#475569", border:"none", borderRadius:6, color:fl===1?"#475569":"white", fontWeight:900, fontSize:"0.68rem", cursor:"pointer", transform:fl===1?"scale(0.93)":"scale(1)", transition:"all 0.1s", lineHeight:1.3 }}>
-          +1<br/><span style={{ fontSize:"0.52rem", fontWeight:600 }}>DENTRO</span><br/><span style={{ fontSize:"0.72rem" }}>{s.p1||0}</span>
-        </button>
-        <button onClick={()=>click(2)} style={{ padding:"9px 4px", background:fl===2?"white":"#7c3aed", border:"none", borderRadius:6, color:fl===2?"#7c3aed":"white", fontWeight:900, fontSize:"0.68rem", cursor:"pointer", transform:fl===2?"scale(0.93)":"scale(1)", transition:"all 0.1s", lineHeight:1.3 }}>
-          +2<br/><span style={{ fontSize:"0.52rem", fontWeight:600 }}>FUERA</span><br/><span style={{ fontSize:"0.72rem" }}>{s.p2||0}</span>
-        </button>
-      </div>
-    </div>
-  );
-}
+
+// ═══════════════ POSICIONES — FIBA 3x3 D ═══════════════
+function StandingsView({calcStandings,onBack,genLabel,genColor,teams}){const ag=GRUPOS.filter(g=>teams.some(t=>t.grupo===g));return(<div style={S.page}><Hdr title={`📊 ${genLabel}`} onBack={onBack} color={genColor}/><div style={{padding:"12px 10px 80px"}}>{ag.length===0?<Empty icon="📊" title="Sin equipos" desc="Registra equipos primero"/>:ag.map(g=>{const ranked=calcStandings(g).map((e,i)=>({...e,playoffZone:i<2}));return <GrpTable key={g} teams={ranked} label={`GRUPO ${g}`} color={GRUPO_COLORS[g]}/>;})}<div style={{padding:"10px 4px",fontSize:"0.44rem",color:"#94a3b8",lineHeight:1.6}}><strong>Clasificación FIBA 3x3 (Apéndice D 2026):</strong> 1) Más victorias → 2) H2H ganó/perdió → 3) Promedio puntos anotados (tope 21/juego) → 4) Seeding</div></div></div>);}
+function GrpTable({teams,label,color}){if(!teams.length)return null;return(<div style={{...S.card,borderTop:`3px solid ${color}`,marginBottom:14}}><div style={{padding:"9px 12px",fontFamily:F.bar,fontWeight:800,fontSize:"0.8rem",color,letterSpacing:1.5,display:"flex",alignItems:"center",gap:8}}>🏀 {label}</div><div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:"0.7rem",minWidth:420}}><thead><tr style={{background:"#f8fafc",color:"#94a3b8",fontSize:"0.46rem",letterSpacing:1,textTransform:"uppercase"}}><th style={S.th}>#</th><th style={{...S.th,textAlign:"left"}}>Equipo</th><th style={S.th}>JJ</th><th style={{...S.th,background:`${color}15`,color,fontWeight:900}}>JG</th><th style={S.th}>JP</th><th style={S.th}>PF</th><th style={S.th}>PC</th><th style={S.th}>DIF</th><th style={S.th}>PPG</th><th style={{...S.th,minWidth:68}}>FORMA</th></tr></thead><tbody>{teams.map((eq,i)=>(<tr key={eq.id} style={{borderBottom:"1px solid #f1f5f9",background:eq.playoffZone?`${color}06`:"transparent",borderLeft:eq.playoffZone?`3px solid ${color}`:"3px solid transparent"}}><td style={S.td}><div style={{width:20,height:20,borderRadius:"50%",background:eq.playoffZone?color:"#f1f5f9",color:eq.playoffZone?"white":"#94a3b8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.55rem",fontWeight:900,margin:"0 auto",position:"relative"}}>{i+1}{eq.playoffZone&&<div style={{position:"absolute",bottom:-1,right:-3,width:6,height:6,borderRadius:"50%",background:"#10b981",border:"1px solid white"}}/>}</div></td><td style={{...S.td,textAlign:"left"}}><div style={{display:"flex",alignItems:"center",gap:5}}><TB team={eq} size={20} fontSize="0.42rem"/><div><span style={{fontWeight:700,fontSize:"0.66rem",color:"#1e293b",display:"block"}}>{eq.nombre}</span>{eq.playoffZone&&<span style={{fontSize:"0.4rem",fontWeight:900,color:"#10b981"}}>✓ PLAYOFF</span>}</div></div></td><td style={{...S.td,color:"#64748b"}}>{eq.jj}</td><td style={{...S.td,color:"#10b981",fontWeight:900,fontSize:"0.85rem"}}>{eq.jg}</td><td style={{...S.td,color:"#ef4444",fontWeight:700}}>{eq.jp}</td><td style={{...S.td,color:"#64748b"}}>{eq.pf}</td><td style={{...S.td,color:"#64748b"}}>{eq.pc}</td><td style={{...S.td,color:eq.dif>=0?"#3b82f6":"#ef4444",fontWeight:700}}>{eq.dif>0?`+${eq.dif}`:eq.dif}</td><td style={{...S.td,color:"#7c3aed",fontWeight:700}}>{eq.ppg}</td><td style={S.td}><div style={{display:"flex",gap:2,justifyContent:"center"}}>{eq.forma?.length?eq.forma.map((r,idx)=>(<div key={idx} style={{width:14,height:14,borderRadius:3,background:r==='G'?"#10b981":"#ef4444",color:"white",fontSize:"0.4rem",fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>{r}</div>)):<span style={{fontSize:"0.5rem",color:"#cbd5e1"}}>—</span>}</div></td></tr>))}</tbody></table></div><div style={{padding:"5px 12px",background:"#f8fafc",borderTop:"1px solid #f1f5f9",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:6}}><div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:6,height:6,borderRadius:"50%",background:"#10b981"}}/><span style={{fontSize:"0.44rem",color:"#10b981",fontWeight:700}}>Clasifica (top 2)</span></div><div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:12,height:12,borderRadius:2,background:"#10b981",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"white",fontSize:"0.38rem",fontWeight:900}}>G</span></div><div style={{width:12,height:12,borderRadius:2,background:"#ef4444",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:"white",fontSize:"0.38rem",fontWeight:900}}>P</span></div><span style={{fontSize:"0.44rem",color:"#94a3b8"}}>Últimos 5</span></div></div></div>);}
+
+// ═══════════════ MESA ═══════════════
+function MesaView({step,teams,players,mesaMatch,matches,statsPartido,allJugadas,onCrearPartido,onStat,onDeletePlay,onFinalizar,onBack,setMesaStep,setMesaMatch,genColor}){const[localId,setLocalId]=useState("");const[visitId,setVisitId]=useState("");const[showHist,setShowHist]=useState(false);const[confirmFin,setConfirmFin]=useState(false);const[delConfirm,setDelConfirm]=useState(null);
+  if(step==="select"){const ec=matches.filter(m=>m.estatus==="programado");return(<div style={S.page}><Hdr title="⏱️ MESA TÉCNICA" onBack={onBack} color={genColor}/><div style={{padding:14,maxWidth:440,margin:"0 auto",width:"100%"}}>{teams.length<2?<Empty icon="⏱️" title="2+ equipos requeridos" desc="Registra equipos primero"/>:<div style={{...S.card,padding:14}}><p style={{fontFamily:F.bar,fontWeight:700,fontSize:"0.78rem",color:"#1e293b",marginBottom:10}}>CREAR PARTIDO</p><label style={S.lbl}>Local</label><select style={S.inp} value={localId} onChange={e=>setLocalId(e.target.value)}><option value="">Seleccionar...</option>{teams.map(t=><option key={t.id} value={t.id}>{t.nombre}</option>)}</select><label style={{...S.lbl,marginTop:8}}>Visitante</label><select style={S.inp} value={visitId} onChange={e=>setVisitId(e.target.value)}><option value="">Seleccionar...</option>{teams.filter(t=>t.id!==localId).map(t=><option key={t.id} value={t.id}>{t.nombre}</option>)}</select><button onClick={()=>{if(localId&&visitId)onCrearPartido(localId,visitId);}} disabled={!localId||!visitId} style={{...S.btnFull,marginTop:12,background:localId&&visitId?"#7c3aed":"#e2e8f0",color:localId&&visitId?"white":"#94a3b8"}}>🏀 INICIAR</button></div>}{ec.length>0&&<div style={{...S.card,marginTop:10}}><div style={{padding:"8px 14px",fontFamily:F.bar,fontWeight:800,fontSize:"0.68rem",color:"#7c3aed",borderBottom:"1px solid #f1f5f9"}}>PROGRAMADOS ({ec.length})</div>{ec.map(m=>{const l=teams.find(t=>t.id===m.localId);const v=teams.find(t=>t.id===m.visitId);return(<button key={m.id} onClick={()=>{setMesaMatch(m);setMesaStep("active");}} style={{width:"100%",padding:"10px 14px",background:"white",border:"none",borderBottom:"1px solid #f1f5f9",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}><span style={{fontWeight:700,fontSize:"0.72rem",color:"#1e293b"}}>{l?.nombre} vs {v?.nombre}</span><span style={{fontWeight:900,color:"#7c3aed",fontSize:"0.8rem"}}>{m.marcadorL||0} - {m.marcadorV||0}</span></button>);})}</div>}</div></div>);}
+  const cur=matches.find(m=>m.id===mesaMatch?.id)||mesaMatch;const lT=teams.find(t=>t.id===cur?.localId);const vT=teams.find(t=>t.id===cur?.visitId);const lP=players.filter(p=>p.equipoId===cur?.localId);const vP=players.filter(p=>p.equipoId===cur?.visitId);const ms=statsPartido.filter(s=>s.matchId===cur?.id);const mj=allJugadas.filter(j=>j.matchId===cur?.id);const gs=pid=>ms.find(s=>s.jugadorId===pid)||{};
+  return(<div style={{background:"#0a0a0a",minHeight:"100vh",display:"flex",flexDirection:"column",color:"white"}}>{confirmFin&&<CModal msg={`¿FINALIZAR?\n${lT?.nombre} ${cur?.marcadorL} - ${cur?.marcadorV} ${vT?.nombre}`} onOk={()=>{setConfirmFin(false);onFinalizar();}} onNo={()=>setConfirmFin(false)}/>}{delConfirm&&<CModal msg={`¿Eliminar jugada?\n#${delConfirm.jugadorNumero} ${delConfirm.jugadorNombre} +${delConfirm.puntos}`} onOk={()=>{onDeletePlay(delConfirm);setDelConfirm(null);}} onNo={()=>setDelConfirm(null)}/>}<div style={{background:"#111",padding:"10px 12px",display:"flex",alignItems:"center",justifyContent:"center",gap:10,borderBottom:"2px solid #1e293b"}}><div style={{textAlign:"right",flex:1}}><div style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.66rem",color:lT?.color}}>{lT?.nombre}</div></div><div style={{display:"flex",alignItems:"center",gap:8,background:"#1e293b",padding:"5px 16px",borderRadius:10}}><span style={{fontSize:"1.7rem",fontWeight:900,fontFamily:F.bar}}>{cur?.marcadorL||0}</span><span style={{fontSize:"0.5rem",color:"#475569"}}>VS</span><span style={{fontSize:"1.7rem",fontWeight:900,fontFamily:F.bar}}>{cur?.marcadorV||0}</span></div><div style={{textAlign:"left",flex:1}}><div style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.66rem",color:vT?.color}}>{vT?.nombre}</div></div></div><div style={{flex:1,display:"flex",overflow:"hidden"}}><div style={{flex:1,padding:"5px 4px",borderRight:"1px solid #1e293b",overflowY:"auto"}}><div style={{textAlign:"center",marginBottom:4,background:`${lT?.color}33`,padding:"3px 0",borderRadius:5,fontSize:"0.52rem",fontWeight:900,color:lT?.color}}>LOCAL</div>{lP.length===0?<NoPl/>:lP.map(p=><PCard key={p.id} player={p} team="local" tc={lT?.color} stats={gs(p.id)} onStat={onStat}/>)}</div><div style={{flex:1,padding:"5px 4px",overflowY:"auto"}}><div style={{textAlign:"center",marginBottom:4,background:`${vT?.color}33`,padding:"3px 0",borderRadius:5,fontSize:"0.52rem",fontWeight:900,color:vT?.color}}>VISITANTE</div>{vP.length===0?<NoPl/>:vP.map(p=><PCard key={p.id} player={p} team="visit" tc={vT?.color} stats={gs(p.id)} onStat={onStat}/>)}</div></div><div style={{padding:"7px 8px",background:"#0f172a",display:"flex",gap:5,borderTop:"2px solid #1e293b"}}><button onClick={()=>setMesaStep("select")} style={mBtn("#334155")}>SALIR</button><button onClick={()=>setShowHist(true)} style={mBtn("#334155")}>📜 {mj.length}</button><button onClick={()=>setConfirmFin(true)} style={{...mBtn("#065f46"),flex:2,fontWeight:900}}>✅ FINALIZAR</button></div>
+  {showHist&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:4000,display:"flex",justifyContent:"center",alignItems:"center",padding:14}}><div style={{background:"#1e293b",width:"100%",maxWidth:360,borderRadius:12,overflow:"hidden",maxHeight:"70vh",display:"flex",flexDirection:"column"}}><div style={{padding:"10px 16px",background:"#0f172a",display:"flex",justifyContent:"space-between",alignItems:"center",fontWeight:900,fontSize:"0.72rem"}}><span>📜 HISTORIAL ({mj.length})</span><button onClick={()=>setShowHist(false)} style={{background:"#334155",border:"none",color:"white",borderRadius:"50%",width:24,height:24,cursor:"pointer",fontSize:"0.66rem"}}>✕</button></div><div style={{overflowY:"auto",flex:1,padding:6}}>{mj.length===0?<p style={{textAlign:"center",color:"#475569",padding:16,fontSize:"0.7rem"}}>Sin jugadas</p>:mj.map((j,i)=>(<div key={j.id} style={{padding:"6px 10px",marginBottom:2,borderRadius:5,background:i===0?"#0f2d1f":"#0f172a",border:`1px solid ${i===0?"#10b981":"#1e293b"}`,display:"flex",justifyContent:"space-between",alignItems:"center",gap:5}}><div style={{display:"flex",alignItems:"center",gap:5,flex:1,minWidth:0}}><span style={{background:j.equipo==="local"?"#1e3a8a":"#7f1d1d",color:"white",padding:"1px 5px",borderRadius:3,fontWeight:900,fontSize:"0.58rem",flexShrink:0}}>#{j.jugadorNumero}</span><span style={{fontWeight:700,fontSize:"0.64rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{j.jugadorNombre}</span></div><span style={{fontWeight:900,color:"#10b981",fontSize:"0.62rem",flexShrink:0}}>+{j.puntos}</span><button onClick={()=>setDelConfirm(j)} style={{background:"#7f1d1d",border:"none",color:"#fca5a5",borderRadius:4,padding:"2px 6px",cursor:"pointer",fontSize:"0.56rem",fontWeight:900,flexShrink:0}}>🗑️</button></div>))}</div></div></div>}
+  </div>);}
+function NoPl(){return<p style={{textAlign:"center",color:"#475569",fontSize:"0.58rem",padding:10}}>Sin jugadores</p>}
+function PCard({player,team,tc,stats,onStat}){const s=stats||{};const[fl,setFl]=useState(null);const click=pts=>{onStat(player,team,pts);setFl(pts);setTimeout(()=>setFl(null),200);};return(<div style={{marginBottom:5,padding:"7px 7px 5px",borderRadius:8,background:"#1a1a1a",border:"1px solid #2d2d2d"}}><div style={{display:"flex",alignItems:"center",gap:5,marginBottom:5}}><span style={{background:tc,color:"white",padding:"2px 6px",borderRadius:4,fontWeight:900,fontSize:"0.72rem",minWidth:22,textAlign:"center"}}>{player.numero}</span><span style={{fontWeight:700,color:"white",fontSize:"0.7rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{player.nombre}</span><span style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.95rem",color:"#fbbf24"}}>{s.puntos||0}</span></div><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}><button onClick={()=>click(1)} style={{padding:"9px 4px",background:fl===1?"white":"#475569",border:"none",borderRadius:6,color:fl===1?"#475569":"white",fontWeight:900,fontSize:"0.68rem",cursor:"pointer",transform:fl===1?"scale(0.93)":"scale(1)",transition:"all 0.1s",lineHeight:1.3}}>+1<br/><span style={{fontSize:"0.52rem",fontWeight:600}}>DENTRO</span><br/><span style={{fontSize:"0.72rem"}}>{s.p1||0}</span></button><button onClick={()=>click(2)} style={{padding:"9px 4px",background:fl===2?"white":"#7c3aed",border:"none",borderRadius:6,color:fl===2?"#7c3aed":"white",fontWeight:900,fontSize:"0.68rem",cursor:"pointer",transform:fl===2?"scale(0.93)":"scale(1)",transition:"all 0.1s",lineHeight:1.3}}>+2<br/><span style={{fontSize:"0.52rem",fontWeight:600}}>FUERA</span><br/><span style={{fontSize:"0.72rem"}}>{s.p2||0}</span></button></div></div>);}
 
 // ═══════════════ MVP ═══════════════
-function LeadersView({ leaders, onBack, genLabel, genColor }) {
-  const leader=leaders[0]; const others=leaders.slice(1,10);
-  return (
-    <div style={S.page}>
-      <Hdr title={`👑 MVP ${genLabel}`} onBack={onBack} color={genColor} />
-      <div style={{ padding:"12px 12px 80px", maxWidth:500, margin:"0 auto" }}>
-        {leaders.length===0 ? <Empty icon="👑" title="Sin estadísticas" desc="Finaliza partidos desde la mesa" /> :
-        <div style={S.card}>
-          {leader && <div style={{ background:`linear-gradient(160deg, #0f172a 0%, ${genColor}cc 100%)`, padding:16, color:"white" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-              <span style={{ fontFamily:F.bar, fontWeight:800, fontSize:"0.58rem", letterSpacing:2 }}>👑 MÁXIMO ANOTADOR</span>
-              <span style={{ background:"rgba(255,255,255,0.15)", padding:"2px 8px", borderRadius:5, fontSize:"0.48rem", fontWeight:900 }}>#1</span>
-            </div>
-            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-              <div style={{ width:56, height:56, borderRadius:"50%", background:leader.equipoColor, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:"1.4rem", color:"white", border:"3px solid rgba(255,255,255,0.3)", flexShrink:0 }}>{leader.nombre.charAt(0)}</div>
-              <div style={{ flex:1 }}>
-                <div style={{ fontFamily:F.bar, fontWeight:900, fontSize:"1rem", textTransform:"uppercase" }}>{leader.nombre}</div>
-                <div style={{ fontSize:"0.52rem", opacity:0.7, fontWeight:600 }}>{leader.equipo} · #{leader.numero}</div>
-                <div style={{ display:"flex", alignItems:"baseline", gap:5, marginTop:3 }}>
-                  <span style={{ fontSize:"2.2rem", fontWeight:900, fontFamily:F.bar, lineHeight:1 }}>{leader.puntos}</span>
-                  <span style={{ fontSize:"0.7rem", fontWeight:700, opacity:0.8 }}>PTS</span>
-                </div>
-                <div style={{ fontSize:"0.52rem", opacity:0.6, marginTop:1 }}>{leader.partidos} PJ · {(leader.puntos/leader.partidos).toFixed(1)} PPG</div>
-              </div>
-            </div>
-          </div>}
-          {others.map((p,i)=>(
-            <div key={p.jugadorId} style={{ padding:"9px 14px", display:"flex", alignItems:"center", borderBottom:"1px solid #f1f5f9", gap:8 }}>
-              <span style={{ width:20, fontWeight:900, color:"#cbd5e1", fontSize:"0.8rem", textAlign:"center", flexShrink:0 }}>{i+2}</span>
-              <div style={{ width:30, height:30, borderRadius:"50%", background:p.equipoColor, display:"flex", alignItems:"center", justifyContent:"center", color:"white", fontWeight:900, fontSize:"0.72rem", flexShrink:0 }}>{p.nombre.charAt(0)}</div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontWeight:700, fontSize:"0.76rem", color:"#1e293b", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.nombre}</div>
-                <div style={{ fontSize:"0.48rem", color:"#94a3b8" }}>{p.equipo} · {(p.puntos/p.partidos).toFixed(1)} PPG</div>
-              </div>
-              <div style={{ textAlign:"right", flexShrink:0 }}>
-                <div style={{ fontWeight:900, color:genColor, fontSize:"0.9rem" }}>{p.puntos}<span style={{ fontSize:"0.48rem", color:"#94a3b8", marginLeft:2 }}>PTS</span></div>
-              </div>
-            </div>
-          ))}
-        </div>}
+function LeadersView({leaders,onBack,genLabel,genColor}){const leader=leaders[0];const others=leaders.slice(1,10);return(<div style={S.page}><Hdr title={`👑 MVP ${genLabel}`} onBack={onBack} color={genColor}/><div style={{padding:"12px 12px 80px",maxWidth:500,margin:"0 auto"}}>{leaders.length===0?<Empty icon="👑" title="Sin estadísticas" desc="Finaliza partidos desde la mesa"/>:<div style={S.card}>{leader&&<div style={{background:`linear-gradient(160deg,#0f172a 0%,${genColor}cc 100%)`,padding:16,color:"white"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.58rem",letterSpacing:2}}>👑 MÁXIMO ANOTADOR</span><span style={{background:"rgba(255,255,255,0.15)",padding:"2px 8px",borderRadius:5,fontSize:"0.48rem",fontWeight:900}}>#1</span></div><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:56,height:56,borderRadius:"50%",background:leader.equipoColor,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:"1.4rem",color:"white",border:"3px solid rgba(255,255,255,0.3)",flexShrink:0}}>{leader.nombre.charAt(0)}</div><div style={{flex:1}}><div style={{fontFamily:F.bar,fontWeight:900,fontSize:"1rem",textTransform:"uppercase"}}>{leader.nombre}</div><div style={{fontSize:"0.52rem",opacity:0.7}}>{leader.equipo} · #{leader.numero}</div><div style={{display:"flex",alignItems:"baseline",gap:5,marginTop:3}}><span style={{fontSize:"2.2rem",fontWeight:900,fontFamily:F.bar,lineHeight:1}}>{leader.puntos}</span><span style={{fontSize:"0.7rem",fontWeight:700,opacity:0.8}}>PTS</span></div><div style={{fontSize:"0.52rem",opacity:0.6,marginTop:1}}>{leader.partidos} PJ · {(leader.puntos/leader.partidos).toFixed(1)} PPG</div></div></div></div>}{others.map((p,i)=>(<div key={p.jugadorId} style={{padding:"9px 14px",display:"flex",alignItems:"center",borderBottom:"1px solid #f1f5f9",gap:8}}><span style={{width:20,fontWeight:900,color:"#cbd5e1",fontSize:"0.8rem",textAlign:"center",flexShrink:0}}>{i+2}</span><div style={{width:30,height:30,borderRadius:"50%",background:p.equipoColor,display:"flex",alignItems:"center",justifyContent:"center",color:"white",fontWeight:900,fontSize:"0.72rem",flexShrink:0}}>{p.nombre.charAt(0)}</div><div style={{flex:1,minWidth:0}}><div style={{fontWeight:700,fontSize:"0.76rem",color:"#1e293b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.nombre}</div><div style={{fontSize:"0.48rem",color:"#94a3b8"}}>{p.equipo} · {(p.puntos/p.partidos).toFixed(1)} PPG</div></div><div style={{textAlign:"right",flexShrink:0}}><div style={{fontWeight:900,color:genColor,fontSize:"0.9rem"}}>{p.puntos}<span style={{fontSize:"0.48rem",color:"#94a3b8",marginLeft:2}}>PTS</span></div></div></div>))}</div>}</div></div>);}
+
+// ═══════════════ ÁRBITROS ═══════════════
+function ArbitrosView({teams,finMatches,allTeams,onBack,genLabel,genColor}){
+  const[tarifa,setTarifa]=useState(5);
+  const teamData=teams.map(team=>{
+    const jj=finMatches.filter(m=>m.localId===team.id||m.visitId===team.id).length;
+    return{...team,jj,monto:jj*tarifa};
+  }).sort((a,b)=>b.jj-a.jj);
+  const totalPartidos=finMatches.length;
+  const totalCobro=teamData.reduce((s,t)=>s+t.monto,0);
+  const totalPorEquipo=teamData.reduce((s,t)=>s+t.jj,0);
+  return(<div style={S.page}><Hdr title={`⚖️ ÁRBITROS ${genLabel}`} onBack={onBack} color="#dc2626"/>
+    <div style={{padding:"12px 10px 80px",maxWidth:500,margin:"0 auto"}}>
+      <div style={{...S.card,padding:14,marginBottom:14}}>
+        <p style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.72rem",color:"#1e293b",marginBottom:10,letterSpacing:1}}>💰 TARIFA POR PARTIDO</p>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontWeight:900,fontSize:"0.9rem",color:"#64748b"}}>$</span>
+          <input type="number" value={tarifa} onChange={e=>setTarifa(Math.max(0,parseFloat(e.target.value)||0))} style={{...S.inp,width:100,textAlign:"center",fontWeight:900,fontSize:"1.1rem"}} min="0" step="0.5"/>
+          <span style={{fontSize:"0.6rem",color:"#94a3b8",fontWeight:600}}>por partido pitado</span>
+        </div>
+        <p style={{fontSize:"0.48rem",color:"#94a3b8",marginTop:6}}>Este monto se cobra a cada equipo participante por cada partido jugado</p>
       </div>
+      <div style={{...S.card,marginBottom:14,borderTop:"3px solid #dc2626"}}>
+        <div style={{padding:"10px 14px",background:"linear-gradient(135deg,#7f1d1d,#dc2626)",color:"white",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div><div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.78rem",letterSpacing:1}}>RESUMEN GENERAL</div><div style={{fontSize:"0.48rem",opacity:0.7,marginTop:2}}>{genLabel} · {totalPartidos} partidos finalizados</div></div>
+          <div style={{textAlign:"right"}}><div style={{fontFamily:F.bar,fontWeight:900,fontSize:"1.5rem"}}>${totalCobro.toFixed(2)}</div><div style={{fontSize:"0.42rem",opacity:0.7}}>RECAUDACIÓN TOTAL</div></div>
+        </div>
+        <div style={{padding:"8px 14px",background:"#fef2f2",display:"flex",justifyContent:"space-around",gap:8}}>
+          <div style={{textAlign:"center"}}><div style={{fontWeight:900,fontSize:"0.9rem",color:"#dc2626"}}>{totalPartidos}</div><div style={{fontSize:"0.42rem",color:"#94a3b8",fontWeight:700}}>PARTIDOS</div></div>
+          <div style={{textAlign:"center"}}><div style={{fontWeight:900,fontSize:"0.9rem",color:"#dc2626"}}>{teamData.length}</div><div style={{fontSize:"0.42rem",color:"#94a3b8",fontWeight:700}}>EQUIPOS</div></div>
+          <div style={{textAlign:"center"}}><div style={{fontWeight:900,fontSize:"0.9rem",color:"#dc2626"}}>${tarifa.toFixed(2)}</div><div style={{fontSize:"0.42rem",color:"#94a3b8",fontWeight:700}}>TARIFA</div></div>
+          <div style={{textAlign:"center"}}><div style={{fontWeight:900,fontSize:"0.9rem",color:"#dc2626"}}>{totalPorEquipo}</div><div style={{fontSize:"0.42rem",color:"#94a3b8",fontWeight:700}}>PARTICIPACIONES</div></div>
+        </div>
+      </div>
+      {teamData.length===0?<Empty icon="⚖️" title="Sin partidos finalizados" desc="Finaliza partidos desde la mesa técnica"/>:
+      <div style={S.card}>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:"0.7rem",minWidth:360}}>
+            <thead><tr style={{background:"#f8fafc",color:"#94a3b8",fontSize:"0.46rem",letterSpacing:1,textTransform:"uppercase"}}>
+              <th style={{...S.th,textAlign:"left",paddingLeft:12}}>Equipo</th>
+              <th style={S.th}>Grupo</th>
+              <th style={S.th}>PJ</th>
+              <th style={{...S.th,background:"#fef2f2",color:"#dc2626",fontWeight:900}}>MONTO</th>
+            </tr></thead>
+            <tbody>{teamData.map((t,i)=>(<tr key={t.id} style={{borderBottom:"1px solid #f1f5f9",background:i%2===0?"white":"#fafafa"}}>
+              <td style={{...S.td,textAlign:"left",paddingLeft:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <TB team={t} size={22} fontSize="0.42rem"/>
+                  <span style={{fontWeight:700,fontSize:"0.68rem",color:"#1e293b"}}>{t.nombre}</span>
+                </div>
+              </td>
+              <td style={S.td}><span style={{background:GRUPO_COLORS[t.grupo]||"#64748b",color:"white",padding:"1px 6px",borderRadius:4,fontWeight:900,fontSize:"0.5rem"}}>{t.grupo}</span></td>
+              <td style={{...S.td,fontWeight:900,color:"#1e293b",fontSize:"0.85rem"}}>{t.jj}</td>
+              <td style={{...S.td,fontWeight:900,color:"#dc2626",fontSize:"0.85rem"}}>${t.monto.toFixed(2)}</td>
+            </tr>))}</tbody>
+            <tfoot><tr style={{background:"#1e293b"}}>
+              <td colSpan={2} style={{...S.td,textAlign:"right",color:"white",fontWeight:900,fontSize:"0.6rem",paddingRight:8}}>TOTAL</td>
+              <td style={{...S.td,color:"#fbbf24",fontWeight:900,fontSize:"0.85rem"}}>{totalPorEquipo}</td>
+              <td style={{...S.td,color:"#fbbf24",fontWeight:900,fontSize:"0.85rem"}}>${totalCobro.toFixed(2)}</td>
+            </tr></tfoot>
+          </table>
+        </div>
+        <div style={{padding:"8px 12px",background:"#f8fafc",borderTop:"1px solid #e2e8f0",fontSize:"0.44rem",color:"#94a3b8",lineHeight:1.5}}>
+          <strong>Nota:</strong> Incluye todos los partidos finalizados (fase de grupos, semifinales, final). Cada equipo paga ${tarifa.toFixed(2)} por cada partido jugado.
+        </div>
+      </div>}
     </div>
-  );
+  </div>);
 }
 
 // ═══════════════ SHARED ═══════════════
-function Hdr({ title, onBack, color="#1e3a8a" }) {
-  return (
-    <div style={{ background:color, padding:"11px 14px", color:"white", display:"flex", justifyContent:"space-between", alignItems:"center", boxShadow:"0 3px 10px rgba(0,0,0,0.15)", flexShrink:0 }}>
-      <h2 style={{ margin:0, fontFamily:F.bar, fontWeight:900, fontSize:"0.92rem", letterSpacing:1 }}>{title}</h2>
-      <button onClick={onBack} style={{ background:"rgba(255,255,255,0.15)", color:"white", border:"none", padding:"5px 12px", borderRadius:7, fontWeight:700, cursor:"pointer", fontSize:"0.64rem" }}>← VOLVER</button>
-    </div>
-  );
-}
-function Empty({ icon, title, desc }) {
-  return <div style={{...S.card, padding:34, textAlign:"center", color:"#94a3b8"}}><div style={{ fontSize:"1.5rem", marginBottom:4 }}>{icon}</div><p style={{ fontWeight:700, fontSize:"0.78rem", margin:"0 0 3px", color:"#475569" }}>{title}</p><p style={{ fontSize:"0.64rem", margin:0 }}>{desc}</p></div>;
-}
-const mBtn = bg => ({ flex:1, padding:"10px 0", background:bg, color:"white", border:"none", borderRadius:7, fontWeight:700, fontSize:"0.58rem", cursor:"pointer", fontFamily:F.bar, letterSpacing:0.5 });
+function Hdr({title,onBack,color="#1e3a8a"}){return<div style={{background:color,padding:"11px 14px",color:"white",display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 3px 10px rgba(0,0,0,0.15)",flexShrink:0}}><h2 style={{margin:0,fontFamily:F.bar,fontWeight:900,fontSize:"0.92rem",letterSpacing:1}}>{title}</h2><button onClick={onBack} style={{background:"rgba(255,255,255,0.15)",color:"white",border:"none",padding:"5px 12px",borderRadius:7,fontWeight:700,cursor:"pointer",fontSize:"0.64rem"}}>← VOLVER</button></div>;}
+function Empty({icon,title,desc}){return<div style={{...S.card,padding:34,textAlign:"center",color:"#94a3b8"}}><div style={{fontSize:"1.5rem",marginBottom:4}}>{icon}</div><p style={{fontWeight:700,fontSize:"0.78rem",margin:"0 0 3px",color:"#475569"}}>{title}</p><p style={{fontSize:"0.64rem",margin:0}}>{desc}</p></div>;}
+function CModal({msg,onOk,onNo}){return<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",padding:18}}><div style={{background:"#1e293b",borderRadius:14,padding:22,maxWidth:300,width:"100%",border:"1px solid #334155",boxShadow:"0 20px 60px rgba(0,0,0,0.5)"}}><p style={{color:"white",fontWeight:700,fontSize:"0.85rem",textAlign:"center",marginBottom:20,lineHeight:1.5,whiteSpace:"pre-line"}}>{msg}</p><div style={{display:"flex",gap:8}}><button onClick={onNo} style={{flex:1,padding:10,background:"#334155",color:"#94a3b8",border:"none",borderRadius:7,fontWeight:700,fontSize:"0.7rem",cursor:"pointer"}}>CANCELAR</button><button onClick={onOk} style={{flex:1,padding:10,background:"#10b981",color:"white",border:"none",borderRadius:7,fontWeight:900,fontSize:"0.7rem",cursor:"pointer"}}>CONFIRMAR</button></div></div></div>;}
+const mBtn=bg=>({flex:1,padding:"10px 0",background:bg,color:"white",border:"none",borderRadius:7,fontWeight:700,fontSize:"0.58rem",cursor:"pointer",fontFamily:F.bar,letterSpacing:0.5});
 
-const S = {
-  app: { fontFamily:F.out, minHeight:"100vh", background:"#f3f4f6" },
-  menuWrap: { minHeight:"100vh", background:"linear-gradient(160deg, #0a0f1f 0%, #0f1d4e 40%, #1a0a3e 100%)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:18, position:"relative", overflow:"hidden" },
-  menuDots: { position:"absolute", inset:0, backgroundImage:"radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px)", backgroundSize:"24px 24px" },
-  menuTitle: { fontFamily:F.bar, fontWeight:900, fontSize:"2.2rem", color:"white", letterSpacing:4, margin:0, textShadow:"0 4px 20px rgba(0,0,0,0.4)" },
-  menuSub: { color:"#fbbf24", fontSize:"0.6rem", fontWeight:700, letterSpacing:2, margin:"4px 0 0", textTransform:"uppercase", fontFamily:F.bar },
-  page: { minHeight:"100vh", background:"#f3f4f6", display:"flex", flexDirection:"column" },
-  card: { background:"white", borderRadius:12, overflow:"hidden", boxShadow:"0 2px 10px rgba(0,0,0,0.05)", border:"1px solid #e2e8f0" },
-  th: { padding:"7px 4px", textAlign:"center" },
-  td: { padding:"7px 4px", textAlign:"center", fontWeight:700, fontSize:"0.72rem" },
-  inp: { width:"100%", padding:"8px 10px", borderRadius:7, border:"1px solid #e2e8f0", fontSize:"0.78rem", fontWeight:600, background:"#f8fafc", boxSizing:"border-box" },
-  lbl: { fontSize:"0.5rem", fontWeight:800, color:"#94a3b8", textTransform:"uppercase", letterSpacing:0.5, display:"block", marginBottom:2, fontFamily:F.bar },
-  btnFull: { width:"100%", padding:11, borderRadius:8, border:"none", color:"white", fontWeight:900, fontSize:"0.78rem", cursor:"pointer", fontFamily:F.bar, letterSpacing:1 },
-  btnSm: { background:"#10b981", color:"white", border:"none", borderRadius:6, padding:"6px 10px", fontWeight:900, cursor:"pointer", fontSize:"0.82rem" },
-  iconBtn: { background:"none", border:"none", cursor:"pointer", fontSize:"0.82rem", padding:"2px 3px" },
-  toast: { position:"fixed", top:14, left:"50%", transform:"translateX(-50%)", color:"white", padding:"7px 16px", borderRadius:20, fontWeight:900, fontSize:"0.7rem", boxShadow:"0 5px 18px rgba(0,0,0,0.4)", zIndex:9000, whiteSpace:"nowrap", fontFamily:F.bar, letterSpacing:0.5 },
-};
+const S={app:{fontFamily:F.out,minHeight:"100vh",background:"#f3f4f6"},menuWrap:{minHeight:"100vh",background:"linear-gradient(160deg,#0a0f1f 0%,#0f1d4e 40%,#1a0a3e 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:18,position:"relative",overflow:"hidden"},menuDots:{position:"absolute",inset:0,backgroundImage:"radial-gradient(circle,rgba(255,255,255,0.03) 1px,transparent 1px)",backgroundSize:"24px 24px"},menuTitle:{fontFamily:F.bar,fontWeight:900,fontSize:"2.2rem",color:"white",letterSpacing:4,margin:0,textShadow:"0 4px 20px rgba(0,0,0,0.4)"},menuSub:{color:"#fbbf24",fontSize:"0.6rem",fontWeight:700,letterSpacing:2,margin:"4px 0 0",textTransform:"uppercase",fontFamily:F.bar},page:{minHeight:"100vh",background:"#f3f4f6",display:"flex",flexDirection:"column"},card:{background:"white",borderRadius:12,overflow:"hidden",boxShadow:"0 2px 10px rgba(0,0,0,0.05)",border:"1px solid #e2e8f0"},th:{padding:"7px 4px",textAlign:"center"},td:{padding:"7px 4px",textAlign:"center",fontWeight:700,fontSize:"0.7rem"},inp:{width:"100%",padding:"8px 10px",borderRadius:7,border:"1px solid #e2e8f0",fontSize:"0.78rem",fontWeight:600,background:"#f8fafc",boxSizing:"border-box"},lbl:{fontSize:"0.5rem",fontWeight:800,color:"#94a3b8",textTransform:"uppercase",letterSpacing:0.5,display:"block",marginBottom:2,fontFamily:F.bar},btnFull:{width:"100%",padding:11,borderRadius:8,border:"none",color:"white",fontWeight:900,fontSize:"0.78rem",cursor:"pointer",fontFamily:F.bar,letterSpacing:1},btnSm:{background:"#10b981",color:"white",border:"none",borderRadius:6,padding:"6px 10px",fontWeight:900,cursor:"pointer",fontSize:"0.82rem"},iconBtn:{background:"none",border:"none",cursor:"pointer",fontSize:"0.82rem",padding:"2px 3px"},toast:{position:"fixed",top:14,left:"50%",transform:"translateX(-50%)",color:"white",padding:"7px 16px",borderRadius:20,fontWeight:900,fontSize:"0.7rem",boxShadow:"0 5px 18px rgba(0,0,0,0.4)",zIndex:9000,whiteSpace:"nowrap",fontFamily:F.bar,letterSpacing:0.5}};

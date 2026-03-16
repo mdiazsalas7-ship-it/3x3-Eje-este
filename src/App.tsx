@@ -247,25 +247,29 @@ function MenuView({teams,players,matches,onNav,genLabel,genColor,onBackGender,on
   return(
     <div style={{...S.menuWrap,background:genColor==="#1e3a8a"?"linear-gradient(160deg,#020617 0%,#0f172a 30%,#1e1b4b 60%,#0f172a 100%)":"linear-gradient(160deg,#1a0a1f 0%,#2e1065 40%,#4a044e 70%,#1a0a1f 100%)"}}>
       <div style={S.menuDots}/>
-      <div style={{textAlign:"center",marginBottom:12,position:"relative",zIndex:1}}>
-        <img src={LOGO_TORNEO} alt="3x3 Aragua" style={{width:64,height:64,objectFit:"contain",borderRadius:10,marginBottom:6}}/>
-        <div style={{display:"inline-flex",alignItems:"center",gap:6,background:`${genColor}cc`,padding:"3px 14px",borderRadius:20,marginBottom:4}}>
-          <div style={{width:6,height:6,borderRadius:"50%",background:accent,boxShadow:`0 0 8px ${accent}`}}/>
-          <span style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.62rem",letterSpacing:3,color:"white"}}>{genLabel}</span>
+      <div style={{textAlign:"center",marginBottom:14,position:"relative",zIndex:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
+        <img src={LOGO_TORNEO} alt="3x3 Aragua" style={{width:110,height:110,objectFit:"contain",borderRadius:16,marginBottom:10,boxShadow:"0 6px 24px rgba(0,0,0,0.4)"}}/>
+        <div style={{display:"inline-flex",alignItems:"center",gap:6,background:`${genColor}cc`,padding:"4px 18px",borderRadius:20}}>
+          <div style={{width:7,height:7,borderRadius:"50%",background:accent,boxShadow:`0 0 10px ${accent}`}}/>
+          <span style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.7rem",letterSpacing:3,color:"white"}}>{genLabel}</span>
         </div>
       </div>
       <div style={{width:"100%",maxWidth:400,position:"relative",zIndex:1}}>
         {/* Top 2 big cards */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-          {items.slice(0,2).map(it=><MCard key={it.key} {...it} onClick={()=>onNav(it.key)} big/>)}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+          {items.slice(0,2).map(it=><MCard key={it.key} {...it} onClick={()=>onNav(it.key)} size="big"/>)}
         </div>
-        {/* Middle row: 3 cards */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
-          {items.slice(2,5).map(it=><MCard key={it.key} {...it} onClick={()=>onNav(it.key)}/>)}
+        {/* Middle: mesa full width */}
+        <div style={{marginBottom:10}}>
+          <MCard {...items[3]} onClick={()=>onNav(items[3].key)} size="hero"/>
         </div>
-        {/* Bottom row: 2 cards */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-          {items.slice(5).map(it=><MCard key={it.key} {...it} onClick={()=>onNav(it.key)}/>)}
+        {/* Row: posiciones + MVP */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+          {[items[2],items[4]].map(it=><MCard key={it.key} {...it} onClick={()=>onNav(it.key)} size="mid"/>)}
+        </div>
+        {/* Bottom row: playoff + arbitros */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+          {items.slice(5).map(it=><MCard key={it.key} {...it} onClick={()=>onNav(it.key)} size="mid"/>)}
         </div>
       </div>
       {/* Stats bar */}
@@ -284,38 +288,47 @@ function MenuView({teams,players,matches,onNav,genLabel,genColor,onBackGender,on
     </div>
   );
 }
-function MCard({icon,label,sub,desc,color,accent,onClick,big}){
+function MCard({icon,label,sub,desc,color,accent,onClick,size="mid"}){
   const[h,setH]=useState(false);const[pressed,setPressed]=useState(false);
+  const isHero=size==="hero",isBig=size==="big";
+  const iconSz=isHero?44:isBig?38:34;
+  const iconRad=isHero?14:isBig?12:10;
+  const pad=isHero?"18px 20px":isBig?"18px 14px":"14px 12px";
+  const fSz=isHero?"0.92rem":isBig?"0.78rem":"0.72rem";
+  const icoFSz=isHero?"1.5rem":isBig?"1.25rem":"1.1rem";
   return(
     <button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>{setH(false);setPressed(false);}} onMouseDown={()=>setPressed(true)} onMouseUp={()=>setPressed(false)} onTouchStart={()=>{setH(true);setPressed(true);}} onTouchEnd={()=>{setH(false);setPressed(false);}}
       style={{
-        padding:big?"16px 14px":"12px 8px",borderRadius:16,border:"none",
+        padding:pad,borderRadius:18,border:"none",width:"100%",
         background:h?`linear-gradient(145deg,${color}dd,${accent}aa)`:"rgba(255,255,255,0.04)",
         backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",
-        color:"white",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:big?"flex-start":"center",gap:big?8:5,
+        color:"white",cursor:"pointer",
+        display:"flex",flexDirection:isHero?"row":"column",alignItems:isHero?"center":"flex-start",gap:isHero?14:isBig?10:8,
         transition:"all 0.25s cubic-bezier(0.4,0,0.2,1)",
-        transform:pressed?"scale(0.95)":h?"translateY(-2px)":"none",
-        boxShadow:h?`0 8px 32px ${color}44, inset 0 1px 0 rgba(255,255,255,0.1)`:"inset 0 1px 0 rgba(255,255,255,0.05), 0 1px 3px rgba(0,0,0,0.2)",
-        outline:h?`1px solid ${accent}66`:"1px solid rgba(255,255,255,0.06)",
-        position:"relative",overflow:"hidden",textAlign:big?"left":"center",
+        transform:pressed?"scale(0.96)":h?"translateY(-2px)":"none",
+        boxShadow:h?`0 8px 32px ${color}44, inset 0 1px 0 rgba(255,255,255,0.15)`:"inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 8px rgba(0,0,0,0.2)",
+        outline:h?`1.5px solid ${accent}66`:"1px solid rgba(255,255,255,0.07)",
+        position:"relative",overflow:"hidden",textAlign:isHero?"left":"left",
       }}>
       {/* Glow orb */}
-      <div style={{position:"absolute",top:"-30%",right:"-20%",width:"60%",height:"60%",borderRadius:"50%",background:`radial-gradient(circle,${color}${h?"30":"10"} 0%,transparent 70%)`,transition:"all 0.3s"}}/>
-      {/* Icon container */}
+      <div style={{position:"absolute",top:"-40%",right:"-15%",width:"50%",height:"80%",borderRadius:"50%",background:`radial-gradient(circle,${color}${h?"35":"12"} 0%,transparent 70%)`,transition:"all 0.3s"}}/>
+      {/* Icon */}
       <div style={{
-        width:big?36:32,height:big?36:32,borderRadius:big?10:8,
-        background:h?`rgba(255,255,255,0.2)`:`linear-gradient(135deg,${color}44,${accent}22)`,
-        display:"flex",alignItems:"center",justifyContent:"center",fontSize:big?"1.2rem":"1rem",
-        transition:"all 0.25s",position:"relative",zIndex:1,
-        boxShadow:h?`0 4px 12px ${color}55`:"none",
+        width:iconSz,height:iconSz,borderRadius:iconRad,
+        background:h?`rgba(255,255,255,0.2)`:`linear-gradient(135deg,${color}55,${accent}30)`,
+        display:"flex",alignItems:"center",justifyContent:"center",fontSize:icoFSz,
+        transition:"all 0.25s",position:"relative",zIndex:1,flexShrink:0,
+        boxShadow:h?`0 4px 16px ${color}55`:`0 2px 8px ${color}22`,
       }}>{icon}</div>
       {/* Text */}
-      <div style={{position:"relative",zIndex:1}}>
-        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:big?"0.82rem":"0.64rem",letterSpacing:big?1.5:1,lineHeight:1.2}}>
-          {label}{sub&&<span style={{fontWeight:600,opacity:0.7}}> {sub}</span>}
+      <div style={{position:"relative",zIndex:1,flex:1}}>
+        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:fSz,letterSpacing:1.5,lineHeight:1.2}}>
+          {label}{sub&&<span style={{fontWeight:600,opacity:0.6}}> {sub}</span>}
         </div>
-        {big&&<div style={{fontSize:"0.44rem",opacity:0.5,marginTop:2,fontWeight:600}}>{desc}</div>}
+        <div style={{fontSize:isHero?"0.5rem":"0.44rem",opacity:0.45,marginTop:3,fontWeight:600,letterSpacing:0.5}}>{desc}</div>
       </div>
+      {/* Arrow for hero */}
+      {isHero&&<div style={{position:"relative",zIndex:1,fontSize:"1.2rem",opacity:h?0.8:0.3,transition:"all 0.2s"}}>→</div>}
     </button>
   );
 }

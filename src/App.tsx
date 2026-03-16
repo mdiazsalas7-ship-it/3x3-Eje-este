@@ -186,7 +186,7 @@ export default function Torneo3x3() {
   }, [showToast]);
 
   const finalizarPartido = useCallback(() => { if(!mesaMatch)return; setAllMatches(prev=>prev.map(m=>m.id===mesaMatch.id?{...m,estatus:"finalizado"}:m)); setMesaMatch(null);setMesaStep("select"); showToast("✅ Partido finalizado"); }, [mesaMatch, showToast]);
-  const crearPartido = useCallback((lid,vid) => { const m={id:genId(),localId:lid,visitId:vid,marcadorL:0,marcadorV:0,estatus:"programado",fecha:new Date().toISOString().split("T")[0],genero}; setAllMatches(prev=>[...prev,m]);setMesaMatch(m);setMesaStep("active"); }, [genero]);
+  const crearPartido = useCallback((lid,vid,fase) => { const m={id:genId(),localId:lid,visitId:vid,marcadorL:0,marcadorV:0,estatus:"programado",fecha:new Date().toISOString().split("T")[0],genero,fase:fase||null}; setAllMatches(prev=>[...prev,m]);setMesaMatch(m);setMesaStep("active"); }, [genero]);
   const iniciarPartido = useCallback((match) => { setMesaMatch(match); setMesaStep("active"); }, []);
 
   const calcStandings = useCallback(grupo => {
@@ -216,12 +216,13 @@ export default function Torneo3x3() {
       <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
       {toast&&<div style={{...S.toast,background:toast.color}}>{toast.msg}</div>}
       {genero===null&&<GenderSelect onSelect={g=>{setGenero(g);setView("menu");}} allTeams={allTeams} allMatches={allMatches} onReset={()=>{if(!window.confirm("⚠️ ¿BORRAR TODOS LOS DATOS?\nEquipos, jugadores, partidos, estadísticas...\nEsta acción no se puede deshacer."))return;setAllTeams([]);setAllPlayers([]);setAllMatches([]);setAllStats([]);setAllJugadas([]);try{Object.keys(localStorage).filter(k=>k.startsWith(LS_KEY)).forEach(k=>localStorage.removeItem(k));}catch(e){}showToast("🗑️ Datos borrados","#ef4444");}} canInstall={!!deferredPrompt&&!isInstalled} onInstall={handleInstall} />}
-      {genero!==null&&view==="menu"&&<MenuView teams={teams} players={players} matches={matches} onNav={setView} genLabel={genLabel} genColor={genColor} onBackGender={()=>setGenero(null)} />}
+      {genero!==null&&view==="menu"&&<MenuView teams={teams} players={players} matches={matches} onNav={setView} genLabel={genLabel} genColor={genColor} onBackGender={()=>setGenero(null)} onNuclear={()=>{if(!window.confirm("☢️ ¿BORRAR ABSOLUTAMENTE TODO?\n\nEquipos, jugadores, logos, partidos,\nestadísticas, calendario, playoff...\n\n⚠️ AMBAS CATEGORÍAS (M y F)\n\nEsta acción NO se puede deshacer."))return;if(!window.confirm("🔴 ÚLTIMA CONFIRMACIÓN\n\n¿Estás SEGURO? Se perderá TODO."))return;setAllTeams([]);setAllPlayers([]);setAllMatches([]);setAllStats([]);setAllJugadas([]);setGenero(null);setView("menu");try{Object.keys(localStorage).filter(k=>k.startsWith(LS_KEY)).forEach(k=>localStorage.removeItem(k));}catch(e){}showToast("☢️ TODO BORRADO","#ef4444");}} />}
       {genero!==null&&view==="admin"&&<AdminView teams={teams} setTeams={setTeams} players={players} allPlayers={allPlayers} setAllPlayers={setAllPlayers} onBack={()=>setView("menu")} showToast={showToast} genero={genero} genLabel={genLabel} genColor={genColor} />}
       {genero!==null&&view==="calendar"&&<CalendarView teams={teams} matches={matches} allTeams={allTeams} onGenerarCalendario={generarCalendario} onIniciarPartido={iniciarPartido} setMesaStep={setMesaStep} onNav={setView} onBack={()=>setView("menu")} genLabel={genLabel} genColor={genColor} />}
       {genero!==null&&view==="standings"&&<StandingsView calcStandings={calcStandings} onBack={()=>setView("menu")} genLabel={genLabel} genColor={genColor} teams={teams} />}
       {genero!==null&&view==="mesa"&&<MesaView step={mesaStep} teams={teams} players={players} mesaMatch={mesaMatch} matches={matches} statsPartido={statsPartido} allJugadas={allJugadas} onCrearPartido={crearPartido} onStat={handleStat} onDeletePlay={handleDeletePlay} onFinalizar={finalizarPartido} onBack={()=>setView("menu")} setMesaStep={setMesaStep} setMesaMatch={setMesaMatch} genColor={genColor} />}
       {genero!==null&&view==="leaders"&&<LeadersView leaders={calcLeaders()} onBack={()=>setView("menu")} genLabel={genLabel} genColor={genColor} />}
+      {genero!==null&&view==="playoff"&&<PlayoffView teams={teams} matches={matches} allTeams={allTeams} calcStandings={calcStandings} onCrearPartido={crearPartido} onIniciarPartido={iniciarPartido} setMesaStep={setMesaStep} onNav={setView} onBack={()=>setView("menu")} genLabel={genLabel} genColor={genColor} genero={genero} />}
       {genero!==null&&view==="arbitros"&&<ArbitrosView teams={teams} finMatches={finMatches} allTeams={allTeams} onBack={()=>setView("menu")} genLabel={genLabel} genColor={genColor} />}
     </div>
   );
@@ -231,8 +232,93 @@ export default function Torneo3x3() {
 function GenderSelect({onSelect,allTeams,allMatches,onReset,canInstall,onInstall}){const mT=allTeams.filter(t=>t.genero==="M").length,fT=allTeams.filter(t=>t.genero==="F").length;const mG=allMatches.filter(m=>m.genero==="M"&&m.estatus==="finalizado").length,fG=allMatches.filter(m=>m.genero==="F"&&m.estatus==="finalizado").length;const total=allTeams.length;const[h,setH]=useState(null);return(<div style={S.menuWrap}><div style={S.menuDots}/><div style={{textAlign:"center",marginBottom:16,position:"relative",zIndex:1}}><div style={{display:"flex",justifyContent:"center",alignItems:"center",marginBottom:16}}><img src={LOGO_TORNEO} alt="3x3 Aragua" style={{width:140,height:140,objectFit:"contain",borderRadius:18,boxShadow:"0 8px 30px rgba(0,0,0,0.4)"}}/></div><h1 style={S.menuTitle}>TORNEO 3×3</h1><p style={S.menuSub}>Asociación de Baloncesto de Aragua · 2026</p><div style={{marginTop:6,display:"flex",justifyContent:"center",alignItems:"center",gap:8}}><img src={LOGO_FVB} alt="FVB" style={{width:24,height:24,borderRadius:"50%",objectFit:"cover",border:"1.5px solid rgba(255,255,255,0.2)"}}/><span style={{fontSize:"0.42rem",color:"rgba(255,255,255,0.3)",fontFamily:F.bar,letterSpacing:1}}>FVB · FIBA 3x3</span></div></div><div style={{marginTop:8,marginBottom:10,textAlign:"center",position:"relative",zIndex:1}}><p style={{fontFamily:F.bar,fontWeight:700,fontSize:"0.75rem",color:"rgba(255,255,255,0.5)",letterSpacing:2,textTransform:"uppercase"}}>Selecciona categoría</p>{total>0&&<p style={{fontSize:"0.44rem",color:"rgba(255,255,255,0.25)",marginTop:2}}>💾 {total} equipos guardados en este dispositivo</p>}</div><div style={{display:"flex",gap:14,width:"100%",maxWidth:400,position:"relative",zIndex:1}}>{[{g:"M",icon:"♂",label:"MASCULINO",color:"#1e3a8a",accent:"#3b82f6",teams:mT,games:mG},{g:"F",icon:"♀",label:"FEMENINO",color:"#9d174d",accent:"#ec4899",teams:fT,games:fG}].map(it=>(<button key={it.g} onClick={()=>onSelect(it.g)} onMouseEnter={()=>setH(it.g)} onMouseLeave={()=>setH(null)} style={{flex:1,padding:"28px 14px",borderRadius:18,border:`2px solid ${h===it.g?it.accent:it.color+"88"}`,background:h===it.g?`linear-gradient(160deg,${it.color},${it.accent})`:"rgba(255,255,255,0.04)",color:"white",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,transition:"all 0.25s",transform:h===it.g?"translateY(-3px) scale(1.02)":"none",boxShadow:h===it.g?`0 10px 30px ${it.accent}55`:"none"}}><span style={{fontSize:"2.2rem"}}>{it.icon}</span><span style={{fontFamily:F.bar,fontWeight:900,fontSize:"1.1rem",letterSpacing:2}}>{it.label}</span><span style={{fontSize:"0.5rem",opacity:0.6}}>{it.teams} equipos · {it.games} partidos</span></button>))}</div>{canInstall&&<button onClick={onInstall} style={{marginTop:20,background:"linear-gradient(135deg,#059669,#10b981)",border:"none",color:"white",padding:"10px 24px",borderRadius:12,cursor:"pointer",fontFamily:F.bar,fontWeight:900,fontSize:"0.72rem",letterSpacing:1.5,position:"relative",zIndex:1,boxShadow:"0 4px 16px rgba(16,185,129,0.4)",display:"flex",alignItems:"center",gap:8}}>📲 INSTALAR APP</button>}<div style={{display:"flex",gap:10,marginTop:canInstall?10:20,position:"relative",zIndex:1}}>{total>0&&<button onClick={onReset} style={{background:"rgba(239,68,68,0.15)",border:"1px solid rgba(239,68,68,0.3)",color:"#fca5a5",padding:"6px 16px",borderRadius:8,cursor:"pointer",fontFamily:F.bar,fontWeight:700,fontSize:"0.54rem",letterSpacing:1}}>🗑️ REINICIAR TORNEO</button>}</div></div>);}
 
 // ═══════════════ MENU ═══════════════
-function MenuView({teams,players,matches,onNav,genLabel,genColor,onBackGender}){const items=[{key:"admin",icon:"🛡️",label:"EQUIPOS Y JUGADORES",desc:"Gestionar nóminas",color:"#0ea5e9"},{key:"calendar",icon:"📅",label:"CALENDARIO",desc:"Fixture automático por grupo",color:"#059669"},{key:"standings",icon:"📊",label:"TABLA DE POSICIONES",desc:"Apéndice D FIBA 3x3 2026",color:genColor},{key:"mesa",icon:"⏱️",label:"MESA TÉCNICA",desc:"Registro en vivo",color:"#7c3aed"},{key:"leaders",icon:"👑",label:"MVP DEL TORNEO",desc:"Máximo anotador",color:"#b45309"},{key:"arbitros",icon:"⚖️",label:"ÁRBITROS",desc:"Cobro por partido pitado",color:"#dc2626"}];return(<div style={{...S.menuWrap,background:genColor==="#1e3a8a"?"linear-gradient(160deg,#0a0f1f 0%,#0f1d4e 40%,#1a0a3e 100%)":"linear-gradient(160deg,#1a0a1f 0%,#4e0f3d 40%,#3e0a2e 100%)"}}><div style={S.menuDots}/><div style={{textAlign:"center",marginBottom:10,position:"relative",zIndex:1}}><div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:12,marginBottom:8}}><img src={LOGO_TORNEO} alt="3x3 Aragua" style={{width:72,height:72,objectFit:"contain",borderRadius:12}}/></div><div style={{display:"inline-block",background:genColor,padding:"4px 16px",borderRadius:20,marginBottom:6}}><span style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.7rem",letterSpacing:2,color:"white"}}>{genLabel}</span></div><h1 style={{...S.menuTitle,fontSize:"1.8rem"}}>TORNEO 3×3</h1></div><div style={{display:"flex",flexDirection:"column",gap:10,width:"100%",maxWidth:380,position:"relative",zIndex:1}}>{items.map(it=><MenuBtn key={it.key} {...it} onClick={()=>onNav(it.key)}/>)}</div><button onClick={onBackGender} style={{marginTop:20,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.6)",padding:"8px 20px",borderRadius:10,cursor:"pointer",fontFamily:F.bar,fontWeight:700,fontSize:"0.68rem",letterSpacing:1,position:"relative",zIndex:1}}>← CAMBIAR CATEGORÍA</button><div style={{marginTop:14,textAlign:"center",position:"relative",zIndex:1}}><span style={{fontSize:"0.5rem",color:"rgba(255,255,255,0.25)",letterSpacing:1.5,fontFamily:F.bar}}>{teams.length} EQUIPOS · {players.length} JUGADORES · {matches.filter(m=>m.estatus==="finalizado").length} PARTIDOS</span></div></div>);}
-function MenuBtn({icon,label,desc,color,onClick}){const[h,setH]=useState(false);return<button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{width:"100%",padding:"15px 18px",borderRadius:14,border:`1.5px solid ${h?color:color+"55"}`,background:h?color:"rgba(255,255,255,0.04)",color:h?"white":"rgba(255,255,255,0.85)",cursor:"pointer",display:"flex",alignItems:"center",gap:14,transition:"all 0.2s",transform:h?"translateY(-1px)":"none",boxShadow:h?`0 6px 20px ${color}55`:"none"}}><span style={{fontSize:"1.3rem",width:32,textAlign:"center"}}>{icon}</span><div style={{textAlign:"left"}}><div style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.85rem",letterSpacing:1}}>{label}</div><div style={{fontSize:"0.5rem",opacity:0.6,marginTop:1}}>{desc}</div></div></button>;}
+function MenuView({teams,players,matches,onNav,genLabel,genColor,onBackGender,onNuclear}){
+  const accent=genColor==="#1e3a8a"?"#3b82f6":"#ec4899";
+  const items=[
+    {key:"admin",icon:"🛡️",label:"EQUIPOS",sub:"Y JUGADORES",desc:"Gestionar nóminas",color:"#0ea5e9",accent:"#38bdf8"},
+    {key:"calendar",icon:"📅",label:"CALENDARIO",sub:"",desc:"Fixture por grupo",color:"#059669",accent:"#34d399"},
+    {key:"standings",icon:"📊",label:"POSICIONES",sub:"",desc:"FIBA 3x3 2026",color:genColor,accent},
+    {key:"mesa",icon:"⏱️",label:"MESA",sub:"TÉCNICA",desc:"Registro en vivo",color:"#7c3aed",accent:"#a78bfa"},
+    {key:"leaders",icon:"👑",label:"MVP",sub:"",desc:"Máximo anotador",color:"#b45309",accent:"#f59e0b"},
+    {key:"playoff",icon:"🏆",label:"PLAYOFF",sub:"",desc:"Cuartos · Semis · Final",color:"#ea580c",accent:"#fb923c"},
+    {key:"arbitros",icon:"⚖️",label:"ÁRBITROS",sub:"",desc:"Cobro por partido",color:"#dc2626",accent:"#f87171"},
+  ];
+  const fin=matches.filter(m=>m.estatus==="finalizado").length;
+  return(
+    <div style={{...S.menuWrap,background:genColor==="#1e3a8a"?"linear-gradient(160deg,#020617 0%,#0f172a 30%,#1e1b4b 60%,#0f172a 100%)":"linear-gradient(160deg,#1a0a1f 0%,#2e1065 40%,#4a044e 70%,#1a0a1f 100%)"}}>
+      <div style={S.menuDots}/>
+      <div style={{textAlign:"center",marginBottom:12,position:"relative",zIndex:1}}>
+        <img src={LOGO_TORNEO} alt="3x3 Aragua" style={{width:64,height:64,objectFit:"contain",borderRadius:10,marginBottom:6}}/>
+        <div style={{display:"inline-flex",alignItems:"center",gap:6,background:`${genColor}cc`,padding:"3px 14px",borderRadius:20,marginBottom:4}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:accent,boxShadow:`0 0 8px ${accent}`}}/>
+          <span style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.62rem",letterSpacing:3,color:"white"}}>{genLabel}</span>
+        </div>
+      </div>
+      <div style={{width:"100%",maxWidth:400,position:"relative",zIndex:1}}>
+        {/* Top 2 big cards */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+          {items.slice(0,2).map(it=><MCard key={it.key} {...it} onClick={()=>onNav(it.key)} big/>)}
+        </div>
+        {/* Middle row: 3 cards */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+          {items.slice(2,5).map(it=><MCard key={it.key} {...it} onClick={()=>onNav(it.key)}/>)}
+        </div>
+        {/* Bottom row: 2 cards */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+          {items.slice(5).map(it=><MCard key={it.key} {...it} onClick={()=>onNav(it.key)}/>)}
+        </div>
+      </div>
+      {/* Stats bar */}
+      <div style={{display:"flex",gap:16,justifyContent:"center",marginBottom:12,position:"relative",zIndex:1}}>
+        {[{n:teams.length,l:"Equipos"},{n:matches.length,l:"Partidos"},{n:fin,l:"Jugados"}].map((s,i)=>(
+          <div key={i} style={{textAlign:"center"}}>
+            <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"1rem",color:"white"}}>{s.n}</div>
+            <div style={{fontSize:"0.4rem",color:"rgba(255,255,255,0.35)",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:8,position:"relative",zIndex:1}}>
+        <button onClick={onBackGender} style={{background:"rgba(255,255,255,0.06)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",border:"1px solid rgba(255,255,255,0.1)",color:"rgba(255,255,255,0.5)",padding:"7px 16px",borderRadius:10,cursor:"pointer",fontFamily:F.bar,fontWeight:700,fontSize:"0.58rem",letterSpacing:1}}>← CATEGORÍA</button>
+        <button onClick={onNuclear} style={{background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",color:"#f87171",padding:"7px 12px",borderRadius:10,cursor:"pointer",fontFamily:F.bar,fontWeight:700,fontSize:"0.52rem",letterSpacing:0.5}}>☢️</button>
+      </div>
+    </div>
+  );
+}
+function MCard({icon,label,sub,desc,color,accent,onClick,big}){
+  const[h,setH]=useState(false);const[pressed,setPressed]=useState(false);
+  return(
+    <button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>{setH(false);setPressed(false);}} onMouseDown={()=>setPressed(true)} onMouseUp={()=>setPressed(false)} onTouchStart={()=>{setH(true);setPressed(true);}} onTouchEnd={()=>{setH(false);setPressed(false);}}
+      style={{
+        padding:big?"16px 14px":"12px 8px",borderRadius:16,border:"none",
+        background:h?`linear-gradient(145deg,${color}dd,${accent}aa)`:"rgba(255,255,255,0.04)",
+        backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",
+        color:"white",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:big?"flex-start":"center",gap:big?8:5,
+        transition:"all 0.25s cubic-bezier(0.4,0,0.2,1)",
+        transform:pressed?"scale(0.95)":h?"translateY(-2px)":"none",
+        boxShadow:h?`0 8px 32px ${color}44, inset 0 1px 0 rgba(255,255,255,0.1)`:"inset 0 1px 0 rgba(255,255,255,0.05), 0 1px 3px rgba(0,0,0,0.2)",
+        outline:h?`1px solid ${accent}66`:"1px solid rgba(255,255,255,0.06)",
+        position:"relative",overflow:"hidden",textAlign:big?"left":"center",
+      }}>
+      {/* Glow orb */}
+      <div style={{position:"absolute",top:"-30%",right:"-20%",width:"60%",height:"60%",borderRadius:"50%",background:`radial-gradient(circle,${color}${h?"30":"10"} 0%,transparent 70%)`,transition:"all 0.3s"}}/>
+      {/* Icon container */}
+      <div style={{
+        width:big?36:32,height:big?36:32,borderRadius:big?10:8,
+        background:h?`rgba(255,255,255,0.2)`:`linear-gradient(135deg,${color}44,${accent}22)`,
+        display:"flex",alignItems:"center",justifyContent:"center",fontSize:big?"1.2rem":"1rem",
+        transition:"all 0.25s",position:"relative",zIndex:1,
+        boxShadow:h?`0 4px 12px ${color}55`:"none",
+      }}>{icon}</div>
+      {/* Text */}
+      <div style={{position:"relative",zIndex:1}}>
+        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:big?"0.82rem":"0.64rem",letterSpacing:big?1.5:1,lineHeight:1.2}}>
+          {label}{sub&&<span style={{fontWeight:600,opacity:0.7}}> {sub}</span>}
+        </div>
+        {big&&<div style={{fontSize:"0.44rem",opacity:0.5,marginTop:2,fontWeight:600}}>{desc}</div>}
+      </div>
+    </button>
+  );
+}
 
 // ═══════════════ ADMIN ═══════════════
 function AdminView({teams,setTeams,players,allPlayers,setAllPlayers,onBack,showToast,genero,genLabel,genColor}){const[sub,setSub]=useState("teams");const[selTeam,setSelTeam]=useState(null);const[tName,setTName]=useState("");const[tGrupo,setTGrupo]=useState("A");const[tColor,setTColor]=useState(COLORS[0]);const[tLogo,setTLogo]=useState(null);const[editTId,setEditTId]=useState(null);const[pName,setPName]=useState("");const[pNum,setPNum]=useState("");const[editPId,setEditPId]=useState(null);const[epName,setEpName]=useState("");const[epNum,setEpNum]=useState("");const[confirmDel,setConfirmDel]=useState(null);const logoRef=useRef(null);
@@ -302,6 +388,133 @@ function PCard({player,team,tc,stats,onStat}){const s=stats||{};const[fl,setFl]=
 
 // ═══════════════ MVP ═══════════════
 function LeadersView({leaders,onBack,genLabel,genColor}){const leader=leaders[0];const others=leaders.slice(1,10);return(<div style={S.page}><Hdr title={`👑 MVP ${genLabel}`} onBack={onBack} color={genColor}/><div style={{padding:"12px 12px 80px",maxWidth:500,margin:"0 auto"}}>{leaders.length===0?<Empty icon="👑" title="Sin estadísticas" desc="Finaliza partidos desde la mesa"/>:<div style={S.card}>{leader&&<div style={{background:`linear-gradient(160deg,#0f172a 0%,${genColor}cc 100%)`,padding:16,color:"white"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><span style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.58rem",letterSpacing:2}}>👑 MÁXIMO ANOTADOR</span><span style={{background:"rgba(255,255,255,0.15)",padding:"2px 8px",borderRadius:5,fontSize:"0.48rem",fontWeight:900}}>#1</span></div><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:56,height:56,borderRadius:"50%",background:leader.equipoColor,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:"1.4rem",color:txtC(leader.equipoColor||"#64748b"),border:"3px solid rgba(255,255,255,0.3)",flexShrink:0}}>{leader.nombre.charAt(0)}</div><div style={{flex:1}}><div style={{fontFamily:F.bar,fontWeight:900,fontSize:"1rem",textTransform:"uppercase"}}>{leader.nombre}</div><div style={{fontSize:"0.52rem",opacity:0.7}}>{leader.equipo} · #{leader.numero}</div><div style={{display:"flex",alignItems:"baseline",gap:5,marginTop:3}}><span style={{fontSize:"2.2rem",fontWeight:900,fontFamily:F.bar,lineHeight:1}}>{leader.puntos}</span><span style={{fontSize:"0.7rem",fontWeight:700,opacity:0.8}}>PTS</span></div><div style={{fontSize:"0.52rem",opacity:0.6,marginTop:1}}>{leader.partidos} PJ · {(leader.puntos/leader.partidos).toFixed(1)} PPG</div></div></div></div>}{others.map((p,i)=>(<div key={p.jugadorId} style={{padding:"9px 14px",display:"flex",alignItems:"center",borderBottom:"1px solid #f1f5f9",gap:8}}><span style={{width:20,fontWeight:900,color:"#cbd5e1",fontSize:"0.8rem",textAlign:"center",flexShrink:0}}>{i+2}</span><div style={{width:30,height:30,borderRadius:"50%",background:p.equipoColor,display:"flex",alignItems:"center",justifyContent:"center",color:txtC(p.equipoColor||"#64748b"),fontWeight:900,fontSize:"0.72rem",flexShrink:0}}>{p.nombre.charAt(0)}</div><div style={{flex:1,minWidth:0}}><div style={{fontWeight:700,fontSize:"0.76rem",color:"#1e293b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.nombre}</div><div style={{fontSize:"0.48rem",color:"#94a3b8"}}>{p.equipo} · {(p.puntos/p.partidos).toFixed(1)} PPG</div></div><div style={{textAlign:"right",flexShrink:0}}><div style={{fontWeight:900,color:genColor,fontSize:"0.9rem"}}>{p.puntos}<span style={{fontSize:"0.48rem",color:"#94a3b8",marginLeft:2}}>PTS</span></div></div></div>))}</div>}</div></div>);}
+
+// ═══════════════ PLAYOFF ═══════════════
+function PlayoffView({teams,matches,allTeams,calcStandings,onCrearPartido,onIniciarPartido,setMesaStep,onNav,onBack,genLabel,genColor,genero}){
+  // Get top 2 from each active group
+  const activeGrupos=GRUPOS.filter(g=>teams.some(t=>t.grupo===g));
+  const classified={};
+  activeGrupos.forEach(g=>{const r=calcStandings(g);classified[g]=[r[0]||null,r[1]||null];});
+  const get=(g,pos)=>classified[g]?.[pos]||null;
+
+  // Bracket: QF matchups
+  const bracket=[
+    {id:"QF1",fase:"Cuartos 1",label:"1A vs 2B",t1:get("A",0),t2:get("B",1)},
+    {id:"QF2",fase:"Cuartos 2",label:"1C vs 2D",t1:get("C",0),t2:get("D",1)},
+    {id:"QF3",fase:"Cuartos 3",label:"1B vs 2A",t1:get("B",0),t2:get("A",1)},
+    {id:"QF4",fase:"Cuartos 4",label:"1D vs 2C",t1:get("D",0),t2:get("C",1)},
+  ];
+
+  // Find playoff matches by fase tag
+  const findMatch=(fase)=>matches.find(m=>m.fase===fase);
+  const getWinner=(fase)=>{const m=findMatch(fase);if(!m||m.estatus!=="finalizado")return null;return(m.marcadorL||0)>(m.marcadorV||0)?allTeams.find(t=>t.id===m.localId):allTeams.find(t=>t.id===m.visitId);};
+
+  // Semis
+  const sf=[
+    {id:"SF1",fase:"Semi 1",t1:getWinner("QF1"),t2:getWinner("QF2")},
+    {id:"SF2",fase:"Semi 2",t1:getWinner("QF3"),t2:getWinner("QF4")},
+  ];
+  // Final
+  const finalMatch={id:"F",fase:"FINAL",t1:getWinner("SF1"),t2:getWinner("SF2")};
+  const champion=getWinner("F");
+
+  const crearPlayoff=(fase,t1,t2)=>{
+    if(!t1||!t2)return;
+    const existing=matches.find(m=>m.fase===fase);
+    if(existing)return;
+    const m={id:genId(),localId:t1.id,visitId:t2.id,marcadorL:0,marcadorV:0,estatus:"programado",fecha:new Date().toISOString().split("T")[0],genero,fase};
+    // We need to add this match via the parent — use a workaround through crearPartido pattern
+    // Actually we need direct access to setAllMatches. Let's use a custom approach:
+    return m;
+  };
+  const [,forceUpdate]=useState(0);
+
+  const handleCrear=(fase,t1,t2)=>{
+    if(!t1||!t2)return;
+    if(matches.find(m=>m.fase===fase))return;
+    // We'll create the match by dispatching to parent
+    const m={id:genId(),localId:t1.id,visitId:t2.id,marcadorL:0,marcadorV:0,estatus:"programado",fecha:new Date().toISOString().split("T")[0],genero,fase};
+    // Access parent state through a trick - pass match to onIniciarPartido
+    onCrearPartido.__addPlayoff?.(m);
+  };
+
+  // Render a bracket slot
+  const Slot=({fase,label,t1,t2,round})=>{
+    const m=findMatch(fase);
+    const fin=m?.estatus==="finalizado";
+    const winner=fin?getWinner(fase):null;
+    const prog=m?.estatus==="programado";
+    return(
+      <div style={{background:"#fff",borderRadius:10,border:`2px solid ${fin?"#10b981":prog?"#f59e0b":"#e2e8f0"}`,overflow:"hidden",marginBottom:8}}>
+        <div style={{padding:"5px 10px",background:fin?"#10b981":prog?"#f59e0b":"#e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.56rem",color:fin||prog?"white":"#94a3b8",letterSpacing:1}}>{label}</span>
+          {fin&&<span style={{fontSize:"0.48rem",fontWeight:900,color:"white"}}>✅</span>}
+          {prog&&<span style={{fontSize:"0.48rem",fontWeight:900,color:"white"}}>EN CURSO</span>}
+        </div>
+        <div style={{padding:"6px 10px"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:3}}>
+            <div style={{display:"flex",alignItems:"center",gap:5,flex:1}}>
+              {t1?<><TB team={t1} size={18} fontSize="0.38rem"/><span style={{fontWeight:700,fontSize:"0.62rem",color:winner?.id===t1.id?"#10b981":"#1e293b"}}>{t1.nombre}</span></>:<span style={{fontSize:"0.56rem",color:"#cbd5e1",fontStyle:"italic"}}>Por definir</span>}
+            </div>
+            {m&&<span style={{fontWeight:900,fontSize:"0.78rem",color:winner?.id===t1?.id?"#10b981":"#64748b"}}>{m.marcadorL||0}</span>}
+          </div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div style={{display:"flex",alignItems:"center",gap:5,flex:1}}>
+              {t2?<><TB team={t2} size={18} fontSize="0.38rem"/><span style={{fontWeight:700,fontSize:"0.62rem",color:winner?.id===t2.id?"#10b981":"#1e293b"}}>{t2.nombre}</span></>:<span style={{fontSize:"0.56rem",color:"#cbd5e1",fontStyle:"italic"}}>Por definir</span>}
+            </div>
+            {m&&<span style={{fontWeight:900,fontSize:"0.78rem",color:winner?.id===t2?.id?"#10b981":"#64748b"}}>{m.marcadorV||0}</span>}
+          </div>
+        </div>
+        {!m&&t1&&t2&&<button onClick={()=>{onCrearPartido(t1.id,t2.id,fase);onNav("mesa");}} style={{width:"100%",padding:"6px",background:"#7c3aed",color:"white",border:"none",fontWeight:900,fontSize:"0.52rem",cursor:"pointer",fontFamily:F.bar,letterSpacing:1}}>▶️ CREAR PARTIDO</button>}
+        {prog&&<button onClick={()=>{onIniciarPartido(m);setMesaStep("active");onNav("mesa");}} style={{width:"100%",padding:"6px",background:"#f59e0b",color:"white",border:"none",fontWeight:900,fontSize:"0.52rem",cursor:"pointer",fontFamily:F.bar,letterSpacing:1}}>⏱️ IR A MESA</button>}
+      </div>
+    );
+  };
+
+  return(<div style={S.page}><Hdr title={`🏆 PLAYOFF ${genLabel}`} onBack={onBack} color="#ea580c"/>
+    <div style={{padding:"12px 10px 80px"}}>
+      {champion&&<div style={{background:"linear-gradient(135deg,#f59e0b,#ea580c)",borderRadius:14,padding:16,marginBottom:14,textAlign:"center",boxShadow:"0 6px 24px rgba(234,88,12,0.3)"}}>
+        <div style={{fontSize:"2rem",marginBottom:4}}>🏆</div>
+        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"1.1rem",color:"white",letterSpacing:2}}>CAMPEÓN</div>
+        <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:10,marginTop:8}}>
+          <TB team={champion} size={48} fontSize="0.7rem" border="3px solid white"/>
+          <div style={{textAlign:"left"}}><div style={{fontFamily:F.bar,fontWeight:900,fontSize:"1.3rem",color:"white"}}>{champion.nombre}</div><div style={{fontSize:"0.5rem",color:"rgba(255,255,255,0.7)"}}>Grupo {champion.grupo}</div></div>
+        </div>
+      </div>}
+
+      {activeGrupos.length<2?<Empty icon="🏆" title="Necesitas 2+ grupos" desc="Registra equipos en al menos 2 grupos"/>:<>
+        <div style={{...S.card,padding:12,marginBottom:14}}>
+          <div style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.7rem",color:"#ea580c",letterSpacing:1,marginBottom:8}}>📋 CLASIFICADOS POR GRUPO</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+            {activeGrupos.map(g=>{const r=calcStandings(g);return(
+              <div key={g} style={{background:"#f8fafc",borderRadius:8,padding:8,border:`2px solid ${GRUPO_COLORS[g]}22`}}>
+                <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.54rem",color:GRUPO_COLORS[g],marginBottom:4}}>GRUPO {g}</div>
+                {[0,1].map(i=>{const t=r[i];return t?(<div key={i} style={{display:"flex",alignItems:"center",gap:4,marginBottom:2}}>
+                  <span style={{fontWeight:900,fontSize:"0.5rem",color:i===0?"#f59e0b":"#94a3b8",width:12}}>{i+1}°</span>
+                  <TB team={t} size={16} fontSize="0.36rem"/>
+                  <span style={{fontWeight:700,fontSize:"0.56rem",color:"#1e293b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.nombre}</span>
+                </div>):<div key={i} style={{fontSize:"0.5rem",color:"#cbd5e1",paddingLeft:12}}>—</div>;})}
+              </div>
+            );})}
+          </div>
+        </div>
+
+        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.72rem",color:"#ea580c",letterSpacing:1.5,marginBottom:6}}>🏀 CUARTOS DE FINAL</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:14}}>
+          {bracket.map(b=><Slot key={b.id} fase={b.id} label={b.fase} t1={b.t1} t2={b.t2} round="QF"/>)}
+        </div>
+
+        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.72rem",color:"#ea580c",letterSpacing:1.5,marginBottom:6}}>⚡ SEMIFINALES</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:14}}>
+          {sf.map(b=><Slot key={b.id} fase={b.id} label={b.fase} t1={b.t1} t2={b.t2} round="SF"/>)}
+        </div>
+
+        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.72rem",color:"#ea580c",letterSpacing:1.5,marginBottom:6}}>🏆 FINAL</div>
+        <Slot fase="F" label="GRAN FINAL" t1={finalMatch.t1} t2={finalMatch.t2} round="F"/>
+      </>}
+    </div>
+  </div>);
+}
 
 // ═══════════════ ÁRBITROS ═══════════════
 function ArbitrosView({teams,finMatches,allTeams,onBack,genLabel,genColor}){

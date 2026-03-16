@@ -456,127 +456,174 @@ function LeadersView({leaders,onBack,genLabel,genColor}){const leader=leaders[0]
 
 // ═══════════════ PLAYOFF ═══════════════
 function PlayoffView({teams,matches,allTeams,calcStandings,onCrearPartido,onIniciarPartido,setMesaStep,onNav,onBack,genLabel,genColor,genero}){
-  // Get top 2 from each active group
   const activeGrupos=GRUPOS.filter(g=>teams.some(t=>t.grupo===g));
   const classified={};
   activeGrupos.forEach(g=>{const r=calcStandings(g);classified[g]=[r[0]||null,r[1]||null];});
   const get=(g,pos)=>classified[g]?.[pos]||null;
+  const allClassified=activeGrupos.flatMap(g=>[get(g,0),get(g,1)]).filter(Boolean);
 
-  // Bracket: QF matchups
-  const bracket=[
-    {id:"QF1",fase:"Cuartos 1",label:"1A vs 2B",t1:get("A",0),t2:get("B",1)},
-    {id:"QF2",fase:"Cuartos 2",label:"1C vs 2D",t1:get("C",0),t2:get("D",1)},
-    {id:"QF3",fase:"Cuartos 3",label:"1B vs 2A",t1:get("B",0),t2:get("A",1)},
-    {id:"QF4",fase:"Cuartos 4",label:"1D vs 2C",t1:get("D",0),t2:get("C",1)},
-  ];
+  const [formato,setFormato]=useState(()=>lsGet("playoff_formato_"+genero,"auto"));
+  const [manualTeams,setManualTeams]=useState(()=>lsGet("playoff_manual_"+genero,{}));
 
-  // Find playoff matches by fase tag
-  const findMatch=(fase)=>matches.find(m=>m.fase===fase);
+  useEffect(()=>{lsSet("playoff_formato_"+genero,formato);},[formato,genero]);
+  useEffect(()=>{lsSet("playoff_manual_"+genero,manualTeams);},[manualTeams,genero]);
+
+  const findMatch=(fase)=>matches.find(m=>m.fase===fase&&m.genero===genero);
   const getWinner=(fase)=>{const m=findMatch(fase);if(!m||m.estatus!=="finalizado")return null;return(m.marcadorL||0)>(m.marcadorV||0)?allTeams.find(t=>t.id===m.localId):allTeams.find(t=>t.id===m.visitId);};
+  const getManual=(slot)=>{const id=manualTeams[slot];return id?allTeams.find(t=>t.id===id):null;};
+  const setManual=(slot,id)=>setManualTeams(prev=>({...prev,[slot]:id}));
 
-  // Semis
-  const sf=[
-    {id:"SF1",fase:"Semi 1",t1:getWinner("QF1"),t2:getWinner("QF2")},
-    {id:"SF2",fase:"Semi 2",t1:getWinner("QF3"),t2:getWinner("QF4")},
+  // Build bracket based on formato
+  const fmt=formato==="auto"?(activeGrupos.length>=4?"QF":activeGrupos.length>=2?"SF":"F"):formato;
+
+  // QF teams (auto or manual)
+  const qfSlots=[
+    {id:"QF1",label:"Cuartos 1",autoT1:get("A",0),autoT2:get("B",1)},
+    {id:"QF2",label:"Cuartos 2",autoT1:get("C",0),autoT2:get("D",1)},
+    {id:"QF3",label:"Cuartos 3",autoT1:get("B",0),autoT2:get("A",1)},
+    {id:"QF4",label:"Cuartos 4",autoT1:get("D",0),autoT2:get("C",1)},
   ];
-  // Final
-  const finalMatch={id:"F",fase:"FINAL",t1:getWinner("SF1"),t2:getWinner("SF2")};
+  // SF teams
+  const sfSlots=[
+    {id:"SF1",label:"Semi 1",autoT1:fmt==="QF"?getWinner("QF1"):getManual("SF1_t1"),autoT2:fmt==="QF"?getWinner("QF2"):getManual("SF1_t2")},
+    {id:"SF2",label:"Semi 2",autoT1:fmt==="QF"?getWinner("QF3"):getManual("SF2_t1"),autoT2:fmt==="QF"?getWinner("QF4"):getManual("SF2_t2")},
+  ];
+  // Final teams
+  const fT1=fmt==="F"?getManual("F_t1"):(fmt==="SF"?getWinner("SF1"):(getWinner("SF1")));
+  const fT2=fmt==="F"?getManual("F_t2"):(fmt==="SF"?getWinner("SF2"):(getWinner("SF2")));
   const champion=getWinner("F");
 
-  const crearPlayoff=(fase,t1,t2)=>{
-    if(!t1||!t2)return;
-    const existing=matches.find(m=>m.fase===fase);
-    if(existing)return;
-    const m={id:genId(),localId:t1.id,visitId:t2.id,marcadorL:0,marcadorV:0,estatus:"programado",fecha:new Date().toISOString().split("T")[0],genero,fase};
-    // We need to add this match via the parent — use a workaround through crearPartido pattern
-    // Actually we need direct access to setAllMatches. Let's use a custom approach:
-    return m;
-  };
-  const [,forceUpdate]=useState(0);
+  // Team picker
+  const Pick=({slot,current,label})=>(
+    <div style={{marginBottom:6}}>
+      <div style={{fontSize:"0.65rem",fontWeight:800,color:"#94a3b8",fontFamily:F.bar,letterSpacing:1,marginBottom:3}}>{label}</div>
+      <select value={current||""} onChange={e=>setManual(slot,e.target.value)} style={{...S.inp,padding:"10px 12px",fontSize:"0.88rem"}}>
+        <option value="">Seleccionar equipo...</option>
+        {allClassified.map(t=><option key={t.id} value={t.id}>{t.nombre} (Grupo {t.grupo})</option>)}
+        {teams.filter(t=>!allClassified.find(c=>c.id===t.id)).map(t=><option key={t.id} value={t.id}>{t.nombre}</option>)}
+      </select>
+    </div>
+  );
 
-  const handleCrear=(fase,t1,t2)=>{
-    if(!t1||!t2)return;
-    if(matches.find(m=>m.fase===fase))return;
-    // We'll create the match by dispatching to parent
-    const m={id:genId(),localId:t1.id,visitId:t2.id,marcadorL:0,marcadorV:0,estatus:"programado",fecha:new Date().toISOString().split("T")[0],genero,fase};
-    // Access parent state through a trick - pass match to onIniciarPartido
-    onCrearPartido.__addPlayoff?.(m);
-  };
-
-  // Render a bracket slot
-  const Slot=({fase,label,t1,t2,round})=>{
-    const m=findMatch(fase);
-    const fin=m?.estatus==="finalizado";
-    const winner=fin?getWinner(fase):null;
-    const prog=m?.estatus==="programado";
+  // Slot render
+  const Slot=({fase,label,t1,t2})=>{
+    const m=findMatch(fase);const fin=m?.estatus==="finalizado";const winner=fin?getWinner(fase):null;const prog=m?.estatus==="programado";
     return(
-      <div style={{background:"#fff",borderRadius:10,border:`2px solid ${fin?"#10b981":prog?"#f59e0b":"#e2e8f0"}`,overflow:"hidden",marginBottom:8}}>
-        <div style={{padding:"5px 10px",background:fin?"#10b981":prog?"#f59e0b":"#e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.95rem",color:fin||prog?"white":"#94a3b8",letterSpacing:1}}>{label}</span>
-          {fin&&<span style={{fontSize:"0.86rem",fontWeight:900,color:"white"}}>✅</span>}
-          {prog&&<span style={{fontSize:"0.86rem",fontWeight:900,color:"white"}}>EN CURSO</span>}
+      <div style={{background:"#fff",borderRadius:14,border:`2px solid ${fin?"#10b981":prog?"#f59e0b":"#e2e8f0"}`,overflow:"hidden",marginBottom:10}}>
+        <div style={{padding:"8px 14px",background:fin?"#10b981":prog?"#f59e0b":"#e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.82rem",color:fin||prog?"white":"#94a3b8",letterSpacing:1}}>{label}</span>
+          {fin&&<span style={{fontSize:"0.75rem",fontWeight:900,color:"white"}}>✅ FINALIZADO</span>}
+          {prog&&<span style={{fontSize:"0.75rem",fontWeight:900,color:"white"}}>⏱️ EN CURSO</span>}
         </div>
-        <div style={{padding:"6px 10px"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:3}}>
-            <div style={{display:"flex",alignItems:"center",gap:5,flex:1}}>
-              {t1?<><TB team={t1} size={18} fontSize="0.38rem"/><span style={{fontWeight:700,fontSize:"0.82rem",color:winner?.id===t1.id?"#10b981":"#1e293b"}}>{t1.nombre}</span></>:<span style={{fontSize:"0.95rem",color:"#cbd5e1",fontStyle:"italic"}}>Por definir</span>}
+        <div style={{padding:"10px 14px"}}>
+          {[{t:t1,score:m?.marcadorL,isW:winner?.id===t1?.id},{t:t2,score:m?.marcadorV,isW:winner?.id===t2?.id}].map((r,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:i===0?"1px solid #f1f5f9":"none"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,flex:1}}>
+                {r.t?<><TB team={r.t} size={28} fontSize="0.42rem"/><span style={{fontWeight:r.isW?900:700,fontSize:"0.88rem",color:r.isW?"#10b981":"#1e293b"}}>{r.t.nombre}</span></>:<span style={{fontSize:"0.82rem",color:"#cbd5e1",fontStyle:"italic"}}>Por definir</span>}
+              </div>
+              {m&&<span style={{fontWeight:900,fontSize:"1.1rem",color:r.isW?"#10b981":"#64748b",fontFamily:F.bar,minWidth:24,textAlign:"right"}}>{r.score||0}</span>}
             </div>
-            {m&&<span style={{fontWeight:900,fontSize:"1rem",color:winner?.id===t1?.id?"#10b981":"#64748b"}}>{m.marcadorL||0}</span>}
-          </div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <div style={{display:"flex",alignItems:"center",gap:5,flex:1}}>
-              {t2?<><TB team={t2} size={18} fontSize="0.38rem"/><span style={{fontWeight:700,fontSize:"0.82rem",color:winner?.id===t2.id?"#10b981":"#1e293b"}}>{t2.nombre}</span></>:<span style={{fontSize:"0.95rem",color:"#cbd5e1",fontStyle:"italic"}}>Por definir</span>}
-            </div>
-            {m&&<span style={{fontWeight:900,fontSize:"1rem",color:winner?.id===t2?.id?"#10b981":"#64748b"}}>{m.marcadorV||0}</span>}
-          </div>
+          ))}
         </div>
-        {!m&&t1&&t2&&<button onClick={()=>{onCrearPartido(t1.id,t2.id,fase);onNav("mesa");}} style={{width:"100%",padding:"6px",background:"#7c3aed",color:"white",border:"none",fontWeight:900,fontSize:"0.92rem",cursor:"pointer",fontFamily:F.bar,letterSpacing:1}}>▶️ CREAR PARTIDO</button>}
-        {prog&&<button onClick={()=>{onIniciarPartido(m);setMesaStep("active");onNav("mesa");}} style={{width:"100%",padding:"6px",background:"#f59e0b",color:"white",border:"none",fontWeight:900,fontSize:"0.92rem",cursor:"pointer",fontFamily:F.bar,letterSpacing:1}}>⏱️ IR A MESA</button>}
+        {!m&&t1&&t2&&<button onClick={()=>{onCrearPartido(t1.id,t2.id,fase);onNav("mesa");}} style={{width:"100%",padding:"10px",background:"#7c3aed",color:"white",border:"none",fontWeight:900,fontSize:"0.82rem",cursor:"pointer",fontFamily:F.bar,letterSpacing:1,borderRadius:0}}>▶️ CREAR PARTIDO</button>}
+        {prog&&<button onClick={()=>{onIniciarPartido(m);setMesaStep("active");onNav("mesa");}} style={{width:"100%",padding:"10px",background:"#f59e0b",color:"white",border:"none",fontWeight:900,fontSize:"0.82rem",cursor:"pointer",fontFamily:F.bar,letterSpacing:1,borderRadius:0}}>⏱️ IR A MESA</button>}
       </div>
     );
   };
 
   return(<div style={S.page}><Hdr title={`🏆 PLAYOFF ${genLabel}`} onBack={onBack} color="#ea580c"/>
     <div style={{padding:"14px 14px 80px"}}>
-      {champion&&<div style={{background:"linear-gradient(135deg,#f59e0b,#ea580c)",borderRadius:14,padding:16,marginBottom:14,textAlign:"center",boxShadow:"0 6px 24px rgba(234,88,12,0.3)"}}>
-        <div style={{fontSize:"2rem",marginBottom:4}}>🏆</div>
-        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"1.1rem",color:"white",letterSpacing:2}}>CAMPEÓN</div>
-        <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:10,marginTop:8}}>
-          <TB team={champion} size={48} fontSize="0.7rem" border="3px solid white"/>
-          <div style={{textAlign:"left"}}><div style={{fontFamily:F.bar,fontWeight:900,fontSize:"1.3rem",color:"white"}}>{champion.nombre}</div><div style={{fontSize:"0.88rem",color:"rgba(255,255,255,0.7)"}}>Grupo {champion.grupo}</div></div>
+      {/* FORMAT SELECTOR */}
+      <div style={{...S.card,padding:16,marginBottom:14}}>
+        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.85rem",color:"#ea580c",letterSpacing:1.5,marginBottom:10}}>⚙️ FORMATO DE PLAYOFF</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6}}>
+          {[{k:"auto",l:"AUTO",d:"Según grupos"},{k:"QF",l:"CUARTOS",d:"8 equipos"},{k:"SF",l:"SEMIS",d:"4 equipos"},{k:"F",l:"FINAL",d:"2 equipos"}].map(f=>(
+            <button key={f.k} onClick={()=>setFormato(f.k)} style={{padding:"10px 4px",borderRadius:10,border:formato===f.k?"2px solid #ea580c":"2px solid #e2e8f0",background:formato===f.k?"#fff7ed":"white",cursor:"pointer",textAlign:"center",transition:"all 0.15s"}}>
+              <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.75rem",color:formato===f.k?"#ea580c":"#64748b",letterSpacing:1}}>{f.l}</div>
+              <div style={{fontSize:"0.58rem",color:"#94a3b8",marginTop:2}}>{f.d}</div>
+            </button>
+          ))}
+        </div>
+        <div style={{marginTop:8,fontSize:"0.68rem",color:"#94a3b8",background:"#f8fafc",padding:"6px 10px",borderRadius:8}}>
+          {fmt==="QF"&&"🏀 Cuartos → Semis → Final (8 equipos)"}
+          {fmt==="SF"&&"⚡ Semis → Final (4 equipos — selecciona abajo)"}
+          {fmt==="F"&&"🏆 Directo a la Final (2 equipos — selecciona abajo)"}
+        </div>
+      </div>
+
+      {/* CHAMPION */}
+      {champion&&<div style={{background:"linear-gradient(135deg,#f59e0b,#ea580c)",borderRadius:16,padding:20,marginBottom:14,textAlign:"center",boxShadow:"0 6px 24px rgba(234,88,12,0.3)"}}>
+        <div style={{fontSize:"2.5rem",marginBottom:4}}>🏆</div>
+        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"1.2rem",color:"white",letterSpacing:2}}>CAMPEÓN</div>
+        <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:12,marginTop:10}}>
+          <TB team={champion} size={56} fontSize="0.75rem" border="3px solid white"/>
+          <div style={{textAlign:"left"}}><div style={{fontFamily:F.bar,fontWeight:900,fontSize:"1.4rem",color:"white"}}>{champion.nombre}</div><div style={{fontSize:"0.82rem",color:"rgba(255,255,255,0.7)"}}>Grupo {champion.grupo}</div></div>
         </div>
       </div>}
 
-      {activeGrupos.length<2?<Empty icon="🏆" title="Necesitas 2+ grupos" desc="Registra equipos en al menos 2 grupos"/>:<>
-        <div style={{...S.card,padding:12,marginBottom:14}}>
-          <div style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.9rem",color:"#ea580c",letterSpacing:1,marginBottom:8}}>📋 CLASIFICADOS POR GRUPO</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-            {activeGrupos.map(g=>{const r=calcStandings(g);return(
-              <div key={g} style={{background:"#f8fafc",borderRadius:8,padding:8,border:`2px solid ${GRUPO_COLORS[g]}22`}}>
-                <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.74rem",color:GRUPO_COLORS[g],marginBottom:4}}>GRUPO {g}</div>
-                {[0,1].map(i=>{const t=r[i];return t?(<div key={i} style={{display:"flex",alignItems:"center",gap:4,marginBottom:2}}>
-                  <span style={{fontWeight:900,fontSize:"0.88rem",color:i===0?"#f59e0b":"#94a3b8",width:12}}>{i+1}°</span>
-                  <TB team={t} size={16} fontSize="0.36rem"/>
-                  <span style={{fontWeight:700,fontSize:"0.95rem",color:"#1e293b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.nombre}</span>
-                </div>):<div key={i} style={{fontSize:"0.88rem",color:"#cbd5e1",paddingLeft:12}}>—</div>;})}
-              </div>
-            );})}
+      {/* CLASSIFIED TEAMS */}
+      {allClassified.length>0&&<div style={{...S.card,padding:14,marginBottom:14}}>
+        <div style={{fontFamily:F.bar,fontWeight:800,fontSize:"0.82rem",color:"#ea580c",letterSpacing:1,marginBottom:8}}>📋 CLASIFICADOS</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          {activeGrupos.map(g=>{const r=calcStandings(g);return(
+            <div key={g} style={{background:"#f8fafc",borderRadius:10,padding:10,border:`2px solid ${GRUPO_COLORS[g]}22`}}>
+              <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.72rem",color:GRUPO_COLORS[g],marginBottom:6}}>GRUPO {g}</div>
+              {[0,1].map(i=>{const t=r[i];return t?(<div key={i} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                <span style={{fontWeight:900,fontSize:"0.72rem",color:i===0?"#f59e0b":"#94a3b8",width:16}}>{i+1}°</span>
+                <TB team={t} size={22} fontSize="0.38rem"/>
+                <span style={{fontWeight:700,fontSize:"0.78rem",color:"#1e293b"}}>{t.nombre}</span>
+              </div>):<div key={i} style={{fontSize:"0.75rem",color:"#cbd5e1",paddingLeft:16}}>—</div>;})}
+            </div>
+          );})}
+        </div>
+      </div>}
+
+      {/* MANUAL TEAM SELECTION for SF or F */}
+      {fmt==="SF"&&<div style={{...S.card,padding:16,marginBottom:14}}>
+        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.82rem",color:"#7c3aed",letterSpacing:1,marginBottom:10}}>🎯 SELECCIONAR EQUIPOS PARA SEMIS</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div style={{background:"#f8fafc",borderRadius:10,padding:10}}>
+            <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.72rem",color:"#ea580c",marginBottom:6}}>SEMI 1</div>
+            <Pick slot="SF1_t1" current={manualTeams.SF1_t1} label="EQUIPO A"/>
+            <Pick slot="SF1_t2" current={manualTeams.SF1_t2} label="EQUIPO B"/>
+          </div>
+          <div style={{background:"#f8fafc",borderRadius:10,padding:10}}>
+            <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.72rem",color:"#ea580c",marginBottom:6}}>SEMI 2</div>
+            <Pick slot="SF2_t1" current={manualTeams.SF2_t1} label="EQUIPO A"/>
+            <Pick slot="SF2_t2" current={manualTeams.SF2_t2} label="EQUIPO B"/>
           </div>
         </div>
+      </div>}
 
-        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.92rem",color:"#ea580c",letterSpacing:1.5,marginBottom:6}}>🏀 CUARTOS DE FINAL</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:14}}>
-          {bracket.map(b=><Slot key={b.id} fase={b.id} label={b.fase} t1={b.t1} t2={b.t2} round="QF"/>)}
+      {fmt==="F"&&<div style={{...S.card,padding:16,marginBottom:14}}>
+        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.82rem",color:"#f59e0b",letterSpacing:1,marginBottom:10}}>🏆 SELECCIONAR FINALISTAS</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <Pick slot="F_t1" current={manualTeams.F_t1} label="FINALISTA 1"/>
+          <Pick slot="F_t2" current={manualTeams.F_t2} label="FINALISTA 2"/>
         </div>
+      </div>}
 
-        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.92rem",color:"#ea580c",letterSpacing:1.5,marginBottom:6}}>⚡ SEMIFINALES</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:14}}>
-          {sf.map(b=><Slot key={b.id} fase={b.id} label={b.fase} t1={b.t1} t2={b.t2} round="SF"/>)}
+      {/* BRACKET */}
+      {fmt==="QF"&&<>
+        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.88rem",color:"#ea580c",letterSpacing:1.5,marginBottom:8}}>🏀 CUARTOS DE FINAL</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+          {qfSlots.map(b=><Slot key={b.id} fase={b.id} label={b.label} t1={b.autoT1} t2={b.autoT2}/>)}
         </div>
-
-        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.92rem",color:"#ea580c",letterSpacing:1.5,marginBottom:6}}>🏆 FINAL</div>
-        <Slot fase="F" label="GRAN FINAL" t1={finalMatch.t1} t2={finalMatch.t2} round="F"/>
       </>}
+
+      {(fmt==="QF"||fmt==="SF")&&<>
+        <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.88rem",color:"#ea580c",letterSpacing:1.5,marginBottom:8}}>⚡ SEMIFINALES</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+          {sfSlots.map(b=>{
+            const t1=fmt==="SF"?getManual(b.id+"_t1"):b.autoT1;
+            const t2=fmt==="SF"?getManual(b.id+"_t2"):b.autoT2;
+            return <Slot key={b.id} fase={b.id} label={b.label} t1={t1} t2={t2}/>;
+          })}
+        </div>
+      </>}
+
+      <div style={{fontFamily:F.bar,fontWeight:900,fontSize:"0.88rem",color:"#ea580c",letterSpacing:1.5,marginBottom:8}}>🏆 GRAN FINAL</div>
+      <Slot fase="F" label="FINAL" t1={fmt==="F"?getManual("F_t1"):fT1} t2={fmt==="F"?getManual("F_t2"):fT2}/>
     </div>
   </div>);
 }
